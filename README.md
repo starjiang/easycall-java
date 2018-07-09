@@ -1,7 +1,7 @@
 # easycall
 
 ===java 微服务框架，轻量,搞性能===
-** 完全 scheme free
+ ** 完全 scheme free
 ** 支持跨语言调用
 ** 数据序列化支持 json/msgpack
 ** 支持同步，异步调用，支持服务异步写法
