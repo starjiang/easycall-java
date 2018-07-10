@@ -1,11 +1,12 @@
-===easycall 协议===
+easycall 协议
+============
 c 一个字节
 w 两个字节
 dw 四个字节
 ddw 八个字节
 s 为buffer
-===easycall 具体协议如下===
-
+easycall 具体协议如下
+--------------------
 cStx+cFormat+dwHeadLen+dwBodyLen+sHeadData+sBodyData+cEtx
 
 cStx magic number 固定为0x2，为包的起始位置
@@ -14,9 +15,8 @@ dwHeadLen head buffer 长度,内容为相应序列化格式对应的buffer
 dwBodyLen body buffer 长度,内容为相应序列化格式对应的buffer
 cEtx magic number 固定为0x3，为包的结束位置
 
-===协议字段命名约定，统一用驼峰命名===
-head 字段说明
-
+协议字段命名约定，统一用驼峰命名，head 字段说明
+----------------------------------------
 字段名 类型 说明
 service string 服务名，必须字段
 method string 方法名，必须字段
