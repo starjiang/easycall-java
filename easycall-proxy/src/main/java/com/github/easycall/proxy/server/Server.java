@@ -4,6 +4,7 @@ import com.github.easycall.client.lb.LoadBalance;
 import com.github.easycall.proxy.client.TransportClient;
 import com.github.easycall.proxy.util.PackageFilter;
 import com.github.easycall.util.DaemonThreadFactory;
+import io.netty.handler.codec.http.HttpContentCompressor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,6 +90,7 @@ public class Server {
 	                p.addLast(new HttpRequestDecoder());
 	                p.addLast(new HttpObjectAggregator(2*1024*1024));
 	                p.addLast(new HttpResponseEncoder());
+	                p.addLast(new HttpContentCompressor());
 	                p.addLast(new HttpHandler(client,timeout));
             	}
 			});

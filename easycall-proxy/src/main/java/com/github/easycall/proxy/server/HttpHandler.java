@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.github.easycall.exception.EasyException;
 import com.github.easycall.exception.EasyInvalidPkgException;
 import com.github.easycall.proxy.client.ResponseFuture;
 import com.github.easycall.proxy.client.TransportClient;
