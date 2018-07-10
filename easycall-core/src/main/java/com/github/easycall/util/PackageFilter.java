@@ -77,14 +77,14 @@ public class PackageFilter extends ByteToMessageDecoder {
 
 		int headlen = buf.getInt(offset+2);
 		
-		if(headlen > EasyPackage.MAX_LEN)
+		if(headlen > EasyPackage.HEAD_MAX_LEN)
 		{
 			return -2;
 		}
 
 		int bodylen = buf.getInt(offset+6);
 
-		if(bodylen > EasyPackage.MAX_LEN)
+		if(bodylen > EasyPackage.BODY_MAX_LEN)
 		{
 			return -2;
 		}

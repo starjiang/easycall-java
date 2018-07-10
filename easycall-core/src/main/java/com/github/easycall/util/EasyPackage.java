@@ -13,8 +13,9 @@ public class EasyPackage {
 	final public static byte ETX = 0x3;
 	final public static byte FORMAT_MSGPACK = 0;
 	final public static byte FORMAT_JSON = 1;
-	final public static int MAX_LEN = 2*1024*1024;
-	
+	final public static int HEAD_MAX_LEN = 64*1024;
+	final public static int BODY_MAX_LEN = 2*1024*1024;
+
 	final public static int ERROR_TIME_OUT = 1001;
 	final public static int ERROR_SERVER_INTERNAL = 1002;
 	final public static int ERROR_METHOD_NOT_FOUND = 1003;

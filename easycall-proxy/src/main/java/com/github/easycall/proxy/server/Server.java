@@ -26,7 +26,6 @@ public class Server {
 	
 	
 	final static private int ACCEPT_BACKLOG = 1024;
-	final static private int REQUEST_THREAD_NUM = 4;
 	private int port;
 	private int httpPort;
 	private int bossThreadNum;
@@ -47,7 +46,7 @@ public class Server {
 		this.httpBossThreadNum = httpBossThreadNum;
 		this.httpWorkThreadNum = httpWorkThreadNum;
 		this.timeout = timeout;
-		this.client = new TransportClient(zkConnStr,REQUEST_THREAD_NUM, LoadBalance.LB_ACTIVE);
+		this.client = new TransportClient(zkConnStr,backendThreadNum, LoadBalance.LB_ACTIVE);
 	}
 	
 	public void startAndWait() throws Exception

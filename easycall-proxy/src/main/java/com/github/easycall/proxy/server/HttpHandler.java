@@ -20,9 +20,12 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.easycall.exception.EasyException;
+import com.github.easycall.exception.EasyInvalidPkgException;
 import com.github.easycall.proxy.client.ResponseFuture;
 import com.github.easycall.proxy.client.TransportClient;
 import com.github.easycall.proxy.client.TransportPackage;
+import com.github.easycall.proxy.util.PackageFilter;
 import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
 import io.netty.handler.codec.http.*;
@@ -60,7 +63,9 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 
 				URI uri = new URI(req.getUri());
 
-				if (!uri.getPath().equals("/call")) {
+				String path = uri.getPath();
+
+				if (!path.equals("/call") && !path.equals("/rawcall")) {
 					ctx.writeAndFlush(
 							new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND,
 									Unpooled.wrappedBuffer("{\"msg\":\"page not found\",\"ret\":1002}"
@@ -78,29 +83,9 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
                     return;
                 }
 
-				HttpHeaders headers = req.headers();
+                ByteBuf content = req.content();
 
-				Iterator<Entry<String, String>> it = headers.entries().iterator();
-
-				TransportPackage  pkg = TransportPackage.newInstance().setFormat(TransportPackage.FORMAT_JSON);
-				ObjectNode head = Utils.json.createObjectNode();
-
-				pkg.setHead(head);
-
-				while (it.hasNext()) {
-					Entry<String,String> en = it.next();
-                    String key = en.getKey();
-					if (key.startsWith("X-Easycall-")) {
-                        String keySuffix = key.substring(12);
-                        String keyPrefix = key.substring(11,12);
-                        String fieldName = keyPrefix.toLowerCase()+keySuffix;
-                        head.put(fieldName,en.getValue());
-					}
-				}
-
-				ByteBuf content = req.content();
-
-				if(content.readableBytes() == 0){
+                if(content.readableBytes() == 0){
 
                     ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST,
                             Unpooled.wrappedBuffer("{\"msg\":\"bad request\",\"ret\":1002}".getBytes())))
@@ -108,35 +93,93 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
                     return;
                 }
 
-				pkg.setBody(content);
-
-				ResponseFuture responseFuture = client.asyncRequest(pkg, timeout);
-
-				responseFuture.setCallback(future -> {
-				    if(future.isException()){
-                        respError(ctx,future.getException());
-                    }else{
-				        TransportPackage respPkg = future.getResult();
-
-                        boolean keepAlive = isKeepAlive(req);
-
-                        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, respPkg.getBody());
-                        response.headers().set(CONTENT_TYPE, "application/json");
-                        response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
-
-                        if (!keepAlive) {
-                            ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
-                        } else {
-                            response.headers().set(CONNECTION, Values.KEEP_ALIVE);
-                            ctx.writeAndFlush(response);
-                        }
-                    }
-                });
+                if(path.equals("/call")){
+				    processJsonRequest(ctx,req);
+                }else if(path.equals("/rawcall")){
+				    processRawRequest(ctx,req);
+                }
 			}
 		} catch (Throwable e) {
 			respError(ctx, e);
 		}
 	}
+
+	private void processRawRequest(ChannelHandlerContext ctx,FullHttpRequest req) throws Exception{
+
+        TransportPackage  pkg = TransportPackage.newInstance();
+
+        if(PackageFilter.isValidPackage(req.content()) < 0){
+            throw new EasyInvalidPkgException("invalid pkg");
+        }
+        pkg.decode(req.content());
+        requestAndResponse(ctx,req,pkg,true);
+
+    }
+
+    private void requestAndResponse(ChannelHandlerContext ctx,FullHttpRequest req,TransportPackage pkg,boolean respFull) throws Exception{
+
+        ResponseFuture responseFuture = client.asyncRequest(pkg, timeout);
+
+        responseFuture.setCallback(future -> {
+            if(future.isException()){
+                respError(ctx,future.getException());
+            }else{
+                TransportPackage respPkg = future.getResult();
+
+                boolean keepAlive = isKeepAlive(req);
+                ByteBuf respBuf;
+                if (respFull){
+                    try{
+                        respBuf = respPkg.encode();
+                    }catch (Exception e){
+                        logger.error(e.getMessage(),e);
+                        return;
+                    }
+                }else{
+                    respBuf = respPkg.getBody();
+                }
+
+                FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, respBuf);
+                response.headers().set(CONTENT_TYPE, "application/json");
+                response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+
+                if (!keepAlive) {
+                    ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+                } else {
+                    response.headers().set(CONNECTION, Values.KEEP_ALIVE);
+                    ctx.writeAndFlush(response);
+                }
+            }
+        });
+    }
+
+	private void processJsonRequest(ChannelHandlerContext ctx,FullHttpRequest req) throws  Exception{
+
+        HttpHeaders headers = req.headers();
+
+        Iterator<Entry<String, String>> it = headers.entries().iterator();
+
+        TransportPackage  pkg = TransportPackage.newInstance().setFormat(TransportPackage.FORMAT_JSON);
+        ObjectNode head = Utils.json.createObjectNode();
+
+        pkg.setHead(head);
+
+        while (it.hasNext()) {
+            Entry<String,String> en = it.next();
+            String key = en.getKey();
+            if (key.startsWith("X-Easycall-")) {
+                String keySuffix = key.substring(12);
+                String keyPrefix = key.substring(11,12);
+                String fieldName = keyPrefix.toLowerCase()+keySuffix;
+                head.put(fieldName,en.getValue());
+            }
+        }
+
+        pkg.setBody(req.content());
+
+        requestAndResponse(ctx,req,pkg,false);
+
+    }
 
 	private void respError(final ChannelHandlerContext ctx, Throwable e) {
 	    try{
@@ -145,7 +188,7 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
             body.put("msg", e.getMessage());
             byte [] data = Utils.json.writeValueAsBytes(body);
 
-            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK,Unpooled.wrappedBuffer(data));
+            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR,Unpooled.wrappedBuffer(data));
             response.headers().set(CONTENT_TYPE, "application/json");
             response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
             ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);

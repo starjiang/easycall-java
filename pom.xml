@@ -11,6 +11,7 @@
   <modules>
   <module>easycall-core</module>
   <module>easycall-proxy</module>
+    <module>easycall-config</module>
   </modules>
 
 </project>
