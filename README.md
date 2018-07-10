@@ -20,7 +20,7 @@ public final class ServiceDemo {
 
     public static void main(String[] args) throws Exception {	
     	Service.instance.init("127.0.0.1:2181");//初始化服务
-      //创建服务，服务名为profile,端口8001，线程数 32，队列长度 10000，线程池工作模型为随机分发 SyncDemoWorker 为业务类
+        //创建服务，服务名为profile,端口8001，线程数 32，队列长度 10000，线程池工作模型为随机分发 SyncDemoWorker 为业务类
     	Service.instance.createSync("profile", 8001,32,10000, Service.WORK_TYPE_RANDOM, SyncDemoWorker.class);
     	Service.instance.startAndWait();
     	
@@ -78,4 +78,4 @@ public class RequestDemo {
 	}
 }
 
-以上代码可以在com.github.easycall.demo 包地下找到
+以上代码可以在com.github.easycall.demo 包底下找到
