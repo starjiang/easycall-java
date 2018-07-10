@@ -20,9 +20,9 @@ public final class ServiceDemo {
 
     public static void main(String[] args) throws Exception {	
     	Service.instance.init("127.0.0.1:2181");//初始化服务
-        //创建服务，服务名为profile,端口8001，线程数 32，队列长度 10000，线程池工作模型为随机分发 SyncDemoWorker 为业务类
+	//创建服务,并把服务注册到zookeeper，服务名为profile,端口8001，线程数 32，队列长度 10000，线程池工作模型为随机分发,SyncDemoWorker 为业务类具体实现
     	Service.instance.createSync("profile", 8001,32,10000, Service.WORK_TYPE_RANDOM, SyncDemoWorker.class);
-    	Service.instance.startAndWait();
+    	Service.instance.startAndWait();启动服务，并阻塞
     	
     }
 }
@@ -30,12 +30,14 @@ public final class ServiceDemo {
 ---------
 public class SyncDemoWorker {
 
-	private Logger log = LoggerFactory.getLogger(SyncDemoWorker.class);
-    
+    private Logger log = LoggerFactory.getLogger(SyncDemoWorker.class);
+    /*
+    * 服务的方法通过注解映射到对应方法函数
+    **/
     @EasyMethod(method="getProfile")
     public void onGetProfile(Request request, Response response) {
     	log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString()); 	
-    	ObjectNode respBoby = Utils.json.createObjectNode();
+    	ObjectNode respBoby = Utils.json.createObjectNode();//返回包体
     	respBoby.put("msg","ok");
     	respBoby.put("ret",0);
     	response.setHead(request.getHead()).setBody(respBoby);
@@ -58,15 +60,16 @@ public class RequestDemo {
 	
 	public static void main(String[] args) throws Exception
 	{
-    String zkConnStr = "127.0.0.1:2181";
+		String zkConnStr = "127.0.0.1:2181";
 
 		try
-		{
+		{	
+			//创建客户端调用类参数为zk地址，io 线程数，负载均衡类型
 			EasyClient client = new EasyClient(zkConnStr,4, LoadBalance.LB_ROUND_ROBIN);
-      
+
 			ObjectNode reqBody = Utils.json.createObjectNode();
 			reqBody.put("uid",100000).put("seq",0);
-
+			//调用profile 服务的getProfile 方法，请求body 为reqBody，默认用msgpack 方式序列化，超时时间1000ms	
 			EasyPackage pkg = client.syncRequest("profile","getProfile",reqBody, 1000);
 			System.out.println(pkg.getBody().toString());
 
