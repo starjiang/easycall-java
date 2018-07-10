@@ -1,3 +1,4 @@
+config
 *.iml
 .idea
 target
