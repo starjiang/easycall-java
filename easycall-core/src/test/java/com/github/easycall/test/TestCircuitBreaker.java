@@ -1,9 +1,8 @@
 package com.github.easycall.test;
 
-import com.github.easycall.client.CircuitBreaker;
+import com.github.easycall.util.CircuitBreaker;
 import com.github.easycall.exception.EasyException;
 import com.github.easycall.util.EasyPackage;
-import org.junit.Test;
 
 public class TestCircuitBreaker {
 

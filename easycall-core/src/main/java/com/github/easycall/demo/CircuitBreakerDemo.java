@@ -1,6 +1,6 @@
 package com.github.easycall.demo;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.github.easycall.client.CircuitBreaker;
+import com.github.easycall.util.CircuitBreaker;
 import com.github.easycall.client.EasyClient;
 import com.github.easycall.client.lb.LoadBalance;
 import com.github.easycall.util.EasyPackage;

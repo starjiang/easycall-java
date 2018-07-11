@@ -1,9 +1,7 @@
-package com.github.easycall.client;
-
-import com.github.easycall.util.EasyPackage;
+package com.github.easycall.util;
+import com.github.easycall.client.UncheckedFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -36,11 +34,11 @@ public class CircuitBreaker {
 
     public static Logger log = LoggerFactory.getLogger(CircuitBreaker.class);
 
-    private static double failRate = 0.5;
-    private static double limitRate = 0.2;
-    private static long FAIL_TIME = 30000;
-    private static long LIMIT_TIME = 30000;
-    private static long RESET_TIME = 60000;
+    private final static double FAIL_RATE = 0.5;
+    private final static double LIMIT_RATE = 0.2;
+    private final static long FAIL_TIME = 30000;
+    private final static long LIMIT_TIME = 30000;
+    private final static long RESET_TIME = 60000;
 
 
     private static ConcurrentHashMap<String,CbInfo> infoMap = new ConcurrentHashMap<>();
@@ -71,7 +69,7 @@ public class CircuitBreaker {
         }else if(info.status == CbInfo.CB_LIMIT){
             //半开状态下，随机计算允许通过的请求
             double rand = Math.random();
-            if(rand < limitRate){
+            if(rand < LIMIT_RATE){
                 ptFlag = true;
             }
         }else{
@@ -83,7 +81,7 @@ public class CircuitBreaker {
         //计算熔断阀值，超过阀值，熔断
         double f = (double)info.failCount.get()/(double) info.invokeCount.get();
 
-        if(f > failRate){
+        if(f > FAIL_RATE){
             info.status = CbInfo.CB_OPEN;
             info.lastCircuitBreakerTime = timeNow;
             log.error("CircuitBreaker {} set status open",cbName);
