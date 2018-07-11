@@ -24,10 +24,10 @@ easycall 具体协议如下
 * sBodyData body 序列化后的buffer
 * cEtx magic number 固定为0x3，为包的结束位置
 
-协议字段命名约定，统一用驼峰命名，head 字段说明
-----------------------------------------
-
-# 字段名 类型 说明
+协议字段命名约定，统一用驼峰命名
+---------------------------
+### head 字段说明
+##### 字段名 类型 说明
 * service string 服务名，必须字段
 * method string 方法名，必须字段
 * routeKey string 路由key，负载均衡用,当采用consistent hash算法时用到，可选字段
