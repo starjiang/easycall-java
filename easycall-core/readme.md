@@ -1,4 +1,4 @@
-easycall 协议
+easycall 协议说明
 ============
 
 easycall 字节约定
