@@ -36,7 +36,7 @@ public final class ServiceDemo {
     	String zkConnStr = EasyConfig.instance.getString("service.zk","127.0.0.1:2181");
 	EasyService service = new EasyService(zkConnStr);
     	service.createSync("profile", 8001, SyncDemoWorker.class);//创建一个profile 同步微服务，监听端口8001，业务工作类为SyncDemoWorker
-    	service.createAsync("profileAsync",8002,AsyncDemoWorker.class);//创建一个profileAsync 异步微服务，监听端口8001，业务工作类为SyncDemoWorker
+    	service.createAsync("profileAsync",8002,AsyncDemoWorker.class);//创建一个profileAsync 异步微服务，监听端口8002，业务工作类为AsyncDemoWorker
     	service.startAndWait();
     	
     }
