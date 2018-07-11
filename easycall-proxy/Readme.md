@@ -36,3 +36,7 @@ http 透传easycall 协议包
 ----------------------
 http post body 透传easycall 包
 
+<pre>
+网关使用了netty zero copy 技术，性能是非常之高
+网关完全异步化，最大化了吞吐量
+</pre>
