@@ -1,9 +1,9 @@
 Proxy 网关支持的协议
 =================
 
-##### 1.easycall 原生协议
-##### 2.http json 协议
-##### 3.http 透传 easycall 协议
+##### 1.easycall 原生协议,proxy 负责把请求转发到相应的服务
+##### 2.http json 协议，通过调用/call，proxy 提取http 头部字段,填充到easycall head 头部，post body json 作为 easycall body，然后转发
+##### 3.http 透传 easycall 协议，通过调用/rawcall,proxy 直接把post body 数据当做easycall 包转发
 
 http json 协议传输数据如下
 -------------------------
