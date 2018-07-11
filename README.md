@@ -28,16 +28,20 @@ easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan �
 ========
 服务主类
 --------
+
 public final class ServiceDemo {
 
-    public static void main(String[] args) throws Exception {	
-    	Service.instance.init("127.0.0.1:2181");//初始化服务
-	//创建服务,并把服务注册到zookeeper，服务名为profile,端口8001，线程数 32，队列长度 10000，线程池工作模型为随机分发,SyncDemoWorker 为业务类具体实现
-    	Service.instance.createSync("profile", 8001,32,10000, Service.WORK_TYPE_RANDOM, SyncDemoWorker.class);
-    	Service.instance.startAndWait();启动服务，并阻塞
+    public static void main(String[] args) throws Exception {
+
+    	String zkConnStr = EasyConfig.instance.getString("service.zk","127.0.0.1:2181");
+	EasyService service = new EasyService(zkConnStr);
+    	service.createSync("profile", 8001, SyncDemoWorker.class);//创建一个profile 同步微服务，监听端口8001，业务工作类为SyncDemoWorker
+    	service.createAsync("profileAsync",8002,AsyncDemoWorker.class);//创建一个profileAsync 异步微服务，监听端口8001，业务工作类为SyncDemoWorker
+    	service.startAndWait();
     	
     }
 }
+
 具体业务类
 ---------
 public class SyncDemoWorker {
@@ -78,7 +82,6 @@ public class RequestDemo {
 		{	
 			//创建客户端调用类参数为zk地址，io 线程数，负载均衡类型
 			EasyClient client = new EasyClient(zkConnStr,4, LoadBalance.LB_ROUND_ROBIN);
-
 			ObjectNode reqBody = Utils.json.createObjectNode();
 			reqBody.put("uid",100000).put("seq",0);
 			//调用profile 服务的getProfile 方法，请求body 为reqBody，默认用msgpack 方式序列化，超时时间1000ms	
