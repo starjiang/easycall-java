@@ -102,6 +102,14 @@ public class RequestDemo {
 ----------
 * 1.配置中心目前基于zookeeper 实现
 * 2.配置中心会默认读取classpath 下的system.properties 配置文件，根据config.zk,config.name,config.path 来读取远程配置
-** config.zk 配置所在的zookeeper
-** config.name 配置名，用来区分各模块配置
-** config.path 远程配置持久化到本地的存储路径
+<pre>
+config.zk 配置所在的zookeeper
+config.name 配置名，用来区分各模块配置
+config.path 远程配置持久化到本地的存储路径
+配置加载，持久化机制
+1.EasyConfig 先读取system.properties 配置获取config.zk,config.name,config.path
+2.根据配置检查比较远程配置版本,从${config.path}/${config.name}/remote/version 文件读取本地版本，从/easycall/config/${config.name}/version 读取远程版本，本地版本小于远程版本，进入下一步,否则进入到第4步
+3.从zookeeper 上读取对应/easycall/config/${config.name}/data 配置，持久化到本地,命名为${config.path}/${config.name}/remote/${config.name}.properties
+4.读取持久化到本地的配置${config.path}/${config.name}/remote/${config.name}.properties 如果存在的话
+5.读取${config.path}/${config.name}/local/${config.name}.properties 配置，如果存在的话
+</pre>
