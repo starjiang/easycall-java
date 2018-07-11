@@ -9,6 +9,7 @@ easycall 字节约定
 * dw 四个字节
 * ddw 八个字节
 * s 为buffer
+* 字节顺序为网络序
 
 easycall 具体协议如下
 --------------------
@@ -33,3 +34,5 @@ easycall 具体协议如下
 * requestIp string 请求ip，内网请求为请求机器ip,外网请求为外网ip,可选字段
 * traceId string 请求跟踪id,全局唯一，可选字段
 * seq long 内网异步调用时,回调时用，可选字段
+
+
