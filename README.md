@@ -6,7 +6,7 @@ easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan �
 * 支持跨语言调用python,php,java,c/c++等，凡是支持json/msgpack 序列化的语言都没问题
 * 数据序列化支持 json/msgpack
 * 支持同步，异步调用，支持服务异步写法
-* 负责均衡支持随机，轮询，随机权重，动态负载，一致性hash 五种负载均衡算法
+* 负载均衡支持随机，轮询，随机权重，动态负载，一致性hash 五种负载均衡算法
 * 已经集成配置中心，配置中心基于zookeepr
 * 支持熔断机制,方便服务降级
 * 支持接入网关，网关支持http json,easycall协议
@@ -14,7 +14,7 @@ easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan �
 * 后续会支持go/c++语言版本，还有其他语言客户端
 
 关于easycall 学习使用建议
-=============
+=====================
 * easycall 代码量非常少，没有java 大部分框架的繁杂的类的继承实现，层级
 * 不论是学习微服务框架，还是使用，建议把代码阅读一遍，了解其基本实现思路
 * 如有问题，欢迎咨询,关于本人以前在某大型互联网公司做码农，对大型分布式系统，网络编程，微服务化实践，存储系统有深入研究
@@ -97,3 +97,11 @@ public class RequestDemo {
 }
 
 以上代码可以在com.github.easycall.demo 包底下找到
+
+配置中心说明
+----------
+* 1.配置中心目前基于zookeeper 实现
+* 2.配置中心会默认读取classpath 下的system.properties 配置文件，根据config.zk,config.name,config.path 来读取远程配置
+** config.zk 配置所在的zookeeper
+** config.name 配置名，用来区分各模块配置
+** config.path 远程配置持久化到本地的存储路径
