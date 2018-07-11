@@ -1,9 +1,9 @@
 Proxy 网关支持的协议
 =================
 
-# 1.easycall 原生协议
-# 2.http json 协议
-# 3.http 透传 easycall 协议
+### 1.easycall 原生协议
+### 2.http json 协议
+### 3.http 透传 easycall 协议
 
 http json 协议传输数据如下
 -------------------------
