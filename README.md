@@ -69,6 +69,7 @@ public class SyncDemoWorker {
     	response.setHead(request.getHead()).setBody(respBoby);
     }
 }
+
 客户端调用
 ---------
 
