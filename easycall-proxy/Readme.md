@@ -16,7 +16,9 @@ Cache-Control: no-cache
 Postman-Token: c76b6f47-0ff1-4791-be47-9e2da2f195c2
 
 {}
-
+-------------------------------
+以上是一个完整的向代理服务发的http 包
+具体说明：
 X-Easycall-Service 服务名头部字段
 X-Easycall-Method 方法名头部字段
 
