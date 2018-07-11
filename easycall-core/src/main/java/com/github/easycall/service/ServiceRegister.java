@@ -30,22 +30,13 @@ class HostInfo
 public class ServiceRegister {
 
 	public final static Logger log = LoggerFactory.getLogger(ServiceRegister.class);
-	public final static ServiceRegister instance = new ServiceRegister();
 	private ZkClient zkClient;
-	boolean bInit = false;
 	private HashMap<String, HostInfo> hostMap;
 	private final static int ZK_SESSION_TIMEOUT = 10000;
 	private final static int ZK_CONNECT_TIMEOUT = 2000;
 	
-	protected ServiceRegister(){}
-	
-	public void init(String zkConnStr)
+	public ServiceRegister(String zkConnStr)
 	{
-		if(bInit) 
-		{
-			return;
-		}
-		
 		hostMap = new HashMap<>();
 		
 		zkClient = new ZkClient(zkConnStr,ZK_SESSION_TIMEOUT,ZK_CONNECT_TIMEOUT,new ZkStringSerializer());
@@ -57,18 +48,15 @@ public class ServiceRegister {
 			}
 			
 			public void handleNewSession() throws Exception {
-				// TODO Auto-generated method stub
 				rebuildSession();
 				log.info("session rebuild complete");
 			}
 
 			public void handleSessionEstablishmentError(Throwable arg0) throws Exception {
-				// TODO Auto-generated method stub
 				log.error("session establistment error");
 			}
 		});
-		
-		bInit = true;
+
 	}
 	
 	

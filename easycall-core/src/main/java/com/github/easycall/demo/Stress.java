@@ -8,13 +8,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.client.EasyClient;
 import com.github.easycall.client.lb.LoadBalance;
-import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
 
 class Task implements Runnable
 {
 	static private AtomicInteger currCount = new AtomicInteger(1);
-	static final String SERVICE_DEMO = "profile";
 
 	private EasyClient client;
 
@@ -26,13 +24,9 @@ class Task implements Runnable
 	{
 		try 
 		{
-			ObjectNode reqHead = Utils.json.createObjectNode();
 			ObjectNode reqBody = Utils.json.createObjectNode();
-
-			reqHead.put("service","profile");
-			reqHead.put("method","getProfile");
 			
-			client.syncRequest(EasyPackage.FORMAT_MSGPACK,reqHead, reqBody,2000);
+			client.syncRequest("profileAsync","getProfile", reqBody,2000);
 			int count = currCount.getAndAdd(1);
 			if(count % 10000 == 0)
 			{
@@ -79,7 +73,7 @@ public class Stress {
 
 		while(true)
 		{
-			if(pool.awaitTermination(1000, TimeUnit.MILLISECONDS))
+			if(pool.awaitTermination(100, TimeUnit.MILLISECONDS))
 			{
 				break;
 			}

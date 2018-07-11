@@ -15,7 +15,7 @@ public class SyncDemoWorker {
     @EasyMethod(method="getProfile")
     public void onGetProfile(Request request, Response response) {
     	
-    	log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
+    	//log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
     	
 
     	ObjectNode respBoby = Utils.json.createObjectNode();
@@ -27,7 +27,7 @@ public class SyncDemoWorker {
     @EasyMethod(method="setProfile")
     public void onSetProfile(Request request, Response response) {
     	
-    	log.info("req setProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
+    	//log.info("req setProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
 
 		ObjectNode respBoby = Utils.json.createObjectNode();

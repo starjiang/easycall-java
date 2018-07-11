@@ -165,7 +165,7 @@ public final class EasyClient implements ClientMessageDispatcher {
     public static Logger log = LoggerFactory.getLogger(EasyClient.class);
 
     private static int DEFAULT_TICK_DURATION = 100;
-    private static int DEFAULT_CONNECTION_NUM = 5;
+    private static int DEFAULT_CONNECTION_NUM = 8;
     private static int MAX_SESSION_SIZE = 10000;
 
     private Bootstrap boot;

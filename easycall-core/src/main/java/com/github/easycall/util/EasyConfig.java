@@ -45,7 +45,7 @@ public class EasyConfig {
 			configZk = getString("config.zk");
 
 			if (configName == null || configPath == null || configZk == null){
-			    throw new EasyException("remote config item invalid");
+			    throw new EasyException("local remote config not set");
             }
 			
 			client = new ZkClient(configZk, ZK_SESSION_TIMEOUT,ZK_CONNECT_TIMEOUT,new ZkStringSerializer());
@@ -330,7 +330,7 @@ public class EasyConfig {
         return properties;
     }
 
-	public Integer getInt(String name,Integer dvalue) 
+	public Integer getInt(String name,Integer defaultValue) 
 	{
 		if(config.containsKey(name))
 		{
@@ -339,11 +339,11 @@ public class EasyConfig {
 		}
 		else
 		{
-			return dvalue;
+			return defaultValue;
 		}
 	}
 
-	public Long getLong(String name,Long dvalue)
+	public Long getLong(String name,Long defaultValue)
 	{
 		if(config.containsKey(name))
 		{
@@ -352,11 +352,11 @@ public class EasyConfig {
 		}
 		else
 		{
-			return dvalue;
+			return defaultValue;
 		}
 	}
 	
-	public Float getFloat(String name,Float dvalue)
+	public Float getFloat(String name,Float defaultValue)
 	{
 		if(config.containsKey(name))
 		{
@@ -365,11 +365,11 @@ public class EasyConfig {
 		}
 		else
 		{
-			return dvalue;
+			return defaultValue;
 		}
 	}
 	
-	public Double getDouble(String name,Double dvalue)
+	public Double getDouble(String name,Double defaultValue)
 	{
 		if(config.containsKey(name))
 		{
@@ -378,11 +378,11 @@ public class EasyConfig {
 		}
 		else
 		{
-			return dvalue;
+			return defaultValue;
 		}
 	}
 	
-	public Short getShort(String name,Short dvalue)
+	public Short getShort(String name,Short defaultValue)
 	{
 		if(config.containsKey(name))
 		{
@@ -391,11 +391,11 @@ public class EasyConfig {
 		}
 		else
 		{
-			return dvalue;
+			return defaultValue;
 		}
 	}
 	
-	public String getString(String name,String dvalue)
+	public String getString(String name,String defaultValue)
 	{
 		if(config.containsKey(name))
 		{
@@ -403,9 +403,18 @@ public class EasyConfig {
 		}
 		else
 		{
-			return dvalue;
+			return defaultValue;
 		}
 	}
+
+	public Boolean getBoolean(String name,Boolean defaultValue){
+
+	    if(config.containsKey(name)){
+	        return Boolean.valueOf(config.get(name));
+        }else {
+	        return defaultValue;
+        }
+    }
 	
 	
 	public ArrayList<String> getStringList(String name)
