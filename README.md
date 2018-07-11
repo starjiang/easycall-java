@@ -102,7 +102,7 @@ public class RequestDemo {
 ----------
 * 1.配置中心目前基于zookeeper 实现
 * 2.配置中心会默认读取classpath 下的system.properties 配置文件，根据config.zk,config.name,config.path 来读取远程配置
-* 3.配置中心的目前加载功能已实现，管理功能未实现
+* 3.配置中心的目前加载读取功能已实现，管理功能未实现，不影响使用，可以直接操作zookeeper 来管理配置
 <pre>
 config.zk 配置所在的zookeeper
 config.name 配置名，用来区分各模块配置
