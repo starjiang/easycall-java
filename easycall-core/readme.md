@@ -18,8 +18,8 @@ easycall 具体协议如下
 
 * cStx magic number 固定为0x2，为包的起始位置
 * cFormat 为head 跟 body 序列化格式 0 为msgpack 1为json,这里可以扩展为其他序列化格式，比如protobuf
-* dwHeadLen head buffer 长度,内容为相应序列化格式对应的buffer
-* dwBodyLen body buffer 长度,内容为相应序列化格式对应的buffer
+* dwHeadLen head buffer 长度,内容为相应序列化格式对应的buffer,最大长度64K
+* dwBodyLen body buffer 长度,内容为相应序列化格式对应的buffer,最大长度2M
 * sHeadData head 序列化后的buffer
 * sBodyData body 序列化后的buffer
 * cEtx magic number 固定为0x3，为包的结束位置
