@@ -182,14 +182,10 @@ public class EasyConfig {
 			FileInputStream in = new FileInputStream(file);
 			in.read(fileContent);
 			in.close();
-		} catch (FileNotFoundException e) {
+		} catch (Exception e) {
 			logger.error(e.getMessage(),e);
 			return null;
-		} catch (IOException e) {
-			logger.error(e.getMessage(),e);
-			return  null;
 		}
-
 		return new String(fileContent);
 
 	}
@@ -200,12 +196,9 @@ public class EasyConfig {
 		try {
 			FileInputStream in = new FileInputStream(file);
 			return in;
-		} catch (FileNotFoundException e) {
+		} catch (Exception e) {
 			logger.error(e.getMessage(),e);
 			return null;
-		} catch (IOException e) {
-			logger.error(e.getMessage(),e);
-			return  null;
 		}
 	}
 
