@@ -10,19 +10,18 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class AsyncMessageDispatcher implements MessageDispatcher{
 
     private static Logger log = LoggerFactory.getLogger(AsyncMessageDispatcher.class);
     private HashMap<String, Method> methodMap = new HashMap<String,Method>();
-    private ConcurrentHashMap<Long,Object> objMap;
+    private HashMap<Long,Object> objMap;
     private Class<?> clazz;
 
 
     public AsyncMessageDispatcher(Class<?> clazz) {
         this.clazz = clazz;
-        objMap = new ConcurrentHashMap<>();
+        objMap = new HashMap<>();
         init();
     }
 
@@ -74,10 +73,16 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
             }
             else
             {
-                Object obj = objMap.get(Thread.currentThread().getId());
-                if (obj == null) {
-                    obj = clazz.newInstance();
+                Object obj;
+
+                synchronized (this){
+                    obj = objMap.get(Thread.currentThread().getId());
+                    if (obj == null) {
+                        obj = clazz.newInstance();
+                        objMap.put(Thread.currentThread().getId(),obj);
+                    }
                 }
+
                 method.invoke(obj, request,response);
             }
 
