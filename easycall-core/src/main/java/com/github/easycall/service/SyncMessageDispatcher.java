@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
@@ -19,7 +20,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
     private int queueSize;
     private int threadNum;
     private ArrayList<WorkerThread> threadList;
-    private ArrayList<LinkedBlockingQueue<Object>> queueList;
+    private ArrayList<ArrayBlockingQueue<Object>> queueList;
     private ArrayList<Object> workerList;
     private Class<?> clazz;
     private int workType;
@@ -49,10 +50,16 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
                 routeHash = Utils.hash(routeKey);
             }
             int index = routeHash % threadList.size();
-            queueList.get(index).add(msg);
+            boolean success = queueList.get(index).offer(msg);
+            if(!success){
+                log.error("work queue {} is full,throw away request",index);
+            }
 
         }else if (workType == WORKER_TYPE_RANDOM) {
-            queueList.get(0).add(msg);
+            boolean success = queueList.get(0).offer(msg);
+            if(!success){
+                log.error("work queue is full,throw away request");
+            }
         } else{
             log.error("workType not support");
         }
@@ -103,7 +110,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
         queueList = new ArrayList<>();
         for(int i=0;i<threadNum;i++)
         {
-            LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<>(size);
+            ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<>(size);
             queueList.add(queue);
             if(workType == WORKER_TYPE_RANDOM){
                 break;
