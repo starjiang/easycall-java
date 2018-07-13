@@ -105,7 +105,7 @@ public class RequestDemo {
 * 2.配置中心会默认读取classpath 下的system.properties 配置文件，根据config.zk,config.name,config.path 来读取远程配置
 * 3.配置中心的加载读取功能实现在easycall-core模块里，管理功能实现在easycall-config 模块里
 * 4.配置中心目前缺用户管理认证功能
-
+<pre>
 config.zk 配置所在的zookeeper
 config.name 配置名，用来区分各模块配置
 config.path 远程配置持久化到本地的存储路径
