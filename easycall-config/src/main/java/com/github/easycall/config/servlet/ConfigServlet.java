@@ -21,7 +21,7 @@ public class ConfigServlet extends HttpServlet {
     private ZookeeperDao zookeeperDao;
 
     public ConfigServlet(){
-        zookeeperDao = new ZookeeperDao(Config.instance.getString("config.zk","127.0.0.1:2181"));
+        zookeeperDao = new ZookeeperDao(Config.instance.getString("manage.zk","127.0.0.1:2181"));
     }
 
     @Override
@@ -54,6 +54,10 @@ public class ConfigServlet extends HttpServlet {
 
             }else if(req.getRequestURI().equals("/config/save_version")){
                 saveConfigVersion(req,resp);
+            }else if(req.getRequestURI().equals("/config/create")){
+                createConfig(req,resp);
+            }else if(req.getRequestURI().equals("/config/delete")){
+                deleteConfig(req,resp);
             }
         }catch (Exception e){
             ObjectNode result = Utils.om.createObjectNode();
@@ -62,6 +66,53 @@ public class ConfigServlet extends HttpServlet {
             resp.getWriter().write(Utils.om.writeValueAsString(result));
             log.error(e.getMessage(),e);
         }
+    }
+
+    private void createConfig(HttpServletRequest req, HttpServletResponse resp) throws Exception{
+
+        ObjectNode result = Utils.om.createObjectNode();
+        result.put("ret",0);
+        result.put("msg","ok");
+
+        String configName = req.getParameter("name");
+
+        if(configName == null || configName == ""){
+            throw new Exception("param name is empty");
+        }
+
+        boolean exsit = zookeeperDao.isNodeExsit(Utils.ZK_CONFIG_PATH+"/"+configName);
+
+        if(exsit == true){
+            result.put("ret",1);
+            result.put("msg","config have exsit");
+        }else{
+            zookeeperDao.setNodeData(Utils.ZK_CONFIG_PATH+"/"+configName+"/data","");
+            zookeeperDao.setNodeData(Utils.ZK_CONFIG_PATH+"/"+configName+"/version","0");
+        }
+
+        resp.setContentType("application/json;charset=utf-8");
+        resp.getWriter().write(Utils.om.writeValueAsString(result));
+    }
+
+    private void deleteConfig(HttpServletRequest req, HttpServletResponse resp) throws Exception{
+
+        ObjectNode result = Utils.om.createObjectNode();
+        result.put("ret",0);
+        result.put("msg","ok");
+
+        String configName = req.getParameter("name");
+
+        if(configName == null || configName == ""){
+            throw new Exception("param name is empty");
+        }
+
+        zookeeperDao.deleteNode(Utils.ZK_CONFIG_PATH+"/"+configName+"/data");
+        zookeeperDao.deleteNode(Utils.ZK_CONFIG_PATH+"/"+configName+"/version");
+        zookeeperDao.deleteNode(Utils.ZK_CONFIG_PATH+"/"+configName);
+
+        resp.setContentType("application/json;charset=utf-8");
+        resp.getWriter().write(Utils.om.writeValueAsString(result));
+
     }
 
     private void getConfigList(HttpServletRequest req, HttpServletResponse resp) throws Exception{

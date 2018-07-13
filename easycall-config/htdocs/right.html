@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Easycall 配置管理</title>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript">
+
+function getQueryString(name) {
+    var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
+    var r = window.location.search.substr(1).match(reg);
+    if (r != null) {
+        return unescape(r[2]);
+    }
+    return null;
+}
+
+$(document).ready(function(){
+
+    var name = getQueryString("name");
+
+    if(name != null){
+        $("#name").html("当前修改配置："+name)
+        $.get("/config/info?name="+name,function(result){
+            $("#content").val(result)
+            $("#body").show();
+        });
+
+        $.get("/config/version?name="+name,function(result){
+            $("#version").val(result)
+            $("#body").show();
+        });
+
+        $("#save").on("click",function(){
+            $.ajax({
+                type: "POST",
+                url: "/config/save?name="+name,
+                processData:false,
+                data: $("#content").val(),
+                dataType:"json",
+                contentType:"text/plain",
+                error:function(XMLHttpRequest, textStatus, errorThrown){
+                    alert("请求失败:"+textStatus)
+                },
+                success: function(ret){
+                    if(ret.ret == 0){
+                        alert("配置保存成功")
+                    }else{
+                        alert("配置保存失败:"+ret.msg);
+                    }
+                }
+            });  
+        });
+
+        $("#save_version").on("click",function(){
+
+            $.ajax({
+                type: "POST",
+                url: "/config/save_version?name="+name,
+                processData:false,
+                data: $("#version").val(),
+                dataType:"json",
+                contentType:"text/plain",
+                error:function(XMLHttpRequest, textStatus, errorThrown){
+                    alert("请求失败:"+textStatus)
+                },
+                success: function(ret){
+                    if(ret.ret == 0){
+                        alert("保存版本成功")
+                    }else{
+                        alert("保存版本失败:"+ret.msg);
+                    }
+                }
+            });  
+
+        });
+
+    }else{
+        $("#body").hide();
+    }
+});
+
+</script>
+</head>
+<body>
+<h2>EASYCALL 配置中心</h2>
+<hr/>
+<div id="body">
+<h3 id="name"></h3> 
+<div><input type="number" size="3" id="version"/> <button id="save_version">保存版本号</button> 保存版本号，配置会通知到监听的服务</div>
+<div>
+<textarea rows="35" cols="150" id="content">
+</textarea>
+<br/>
+<button id="save"> 保存配置 </button>
+</div>
+</div>
+</body>
+</html>

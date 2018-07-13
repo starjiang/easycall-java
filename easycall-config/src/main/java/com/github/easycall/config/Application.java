@@ -12,7 +12,7 @@ public class Application {
 
     public static void main(String []args) throws Exception{
 
-        Server server = new Server(8080);
+        Server server = new Server(Config.instance.getInt("manage.port",8080));
         ServletHandler handler = new ServletHandler();
         server.setHandler(handler);
 
@@ -20,7 +20,7 @@ public class Application {
 
         resourceHandler.setDirectoriesListed(false);
         resourceHandler.setWelcomeFiles(new String[]{ "index.html" });
-        resourceHandler.setResourceBase(Config.instance.getString("config.rootPath","./htdocs"));
+        resourceHandler.setResourceBase(Config.instance.getString("manage.rootPath","./htdocs"));
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[] { resourceHandler, handler });
         server.setHandler(handlers);

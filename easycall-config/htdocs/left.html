@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Easycall 配置管理</title>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript">
+
+function del(name){
+
+    var flag =confirm("确认删除配置:"+name+"?");
+    if(!flag){
+        return;
+    }
+
+    var postData = {}
+    postData['name'] = name;
+
+    $.ajax({
+        type: "POST",
+        url: "/config/delete",
+        processData:true,
+        data:postData,
+        dataType:"json",
+        error:function(XMLHttpRequest, textStatus, errorThrown){
+            alert("请求失败:"+textStatus)
+        },
+        success: function(ret){
+            if(ret.ret == 0){
+                loadConfig();
+            }else{
+                alert("删除配置失败:"+ret.msg);
+            }
+        }
+    });     
+
+}
+
+function loadConfig(){
+    $.get("/config/list",function(result){
+    var list = result['data'];
+    var content = '';
+    for(i=0;i<list.length;i++){
+        content+="<div><a href='/right.html?name="+list[i]+"' target='right'>"+list[i]+"</a> <button onclick='del(\""+list[i]+"\")'> X </button></div>";
+    }
+    $("#content").html(content);
+  });
+}
+
+$(document).ready(function(){
+
+  loadConfig();
+
+  $("#add").on("click",function(){
+
+    var postData = {}
+    postData['name'] = $("#config").val();
+
+    $.ajax({
+        type: "POST",
+        url: "/config/create",
+        processData:true,
+        data:postData,
+        dataType:"json",
+        error:function(XMLHttpRequest, textStatus, errorThrown){
+            alert("请求失败:"+textStatus)
+        },
+        success: function(ret){
+            if(ret.ret == 0){
+                loadConfig();
+            }else{
+                alert("添加配置失败:"+ret.msg);
+            }
+        }
+    });  
+  });
+
+});
+
+</script>
+</head>
+<body>
+<h3>配置列表</h3>
+<hr/>
+<input type="text" id="config"/> <button id="add">添加</button>
+<div id="content">
+    加载数据...
+</div>
+</body>
+</html>

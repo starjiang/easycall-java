@@ -37,6 +37,18 @@ public class ZookeeperDao {
     }
 
     public void setNodeData(String path,String data){
+
+        if(!client.exists(path)){
+            client.createPersistent(path,true);
+        }
         client.writeData(path,data);
+    }
+
+    public boolean isNodeExsit(String path){
+        return client.exists(path);
+    }
+
+    public boolean deleteNode(String path){
+        return client.delete(path);
     }
 }
