@@ -1,19 +1,18 @@
 package com.github.easycall.service;
 
 import java.net.SocketAddress;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 
 public class Request
 {
 	private int format;
-	private Throwable cause;
-	private JsonNode head;
-	private JsonNode body;
+	private ObjectNode head;
+	private ObjectNode body;
 	private long createTime;
 	SocketAddress address;
 	
-	public Request(int format,SocketAddress address,long createTime,JsonNode head,JsonNode body)
+	public Request(int format,SocketAddress address,long createTime,ObjectNode head,ObjectNode body)
 	{
 		this.address = address;
 		this.createTime = createTime;
@@ -22,27 +21,17 @@ public class Request
 		this.format = format;
 	}
 	
-	public Request(Throwable cause)
-	{
-		this.cause = cause;
-	}
-	
 	public long getCreateTime()
 	{
 		return createTime;
 	}
 	
-	public JsonNode getHead()
+	public ObjectNode getHead()
 	{
 		return head;
 	}
 	
-	public Throwable getThrowable()
-	{
-		return cause;
-	}
-	
-	public JsonNode getBody()
+	public ObjectNode getBody()
 	{
 		return body;
 	}

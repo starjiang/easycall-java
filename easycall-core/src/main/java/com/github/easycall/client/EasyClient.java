@@ -283,14 +283,7 @@ public final class EasyClient implements ClientMessageDispatcher {
         }
 
         if(session.seq != null){
-            ObjectNode head = Utils.json.createObjectNode();
-            Iterator<Map.Entry<String,JsonNode>> it = pkg.getHead().fields();
-            while (it.hasNext()){
-                Map.Entry<String,JsonNode> entry = it.next();
-                head.put(entry.getKey(),entry.getValue());
-            }
-            head.put("seq",session.seq);
-            pkg.setHead(head);
+            pkg.getHead().put("seq",session.seq);
         }
 
         session.timeout.cancel();

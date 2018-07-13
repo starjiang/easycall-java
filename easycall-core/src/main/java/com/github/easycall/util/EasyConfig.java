@@ -116,13 +116,13 @@ public class EasyConfig {
 	        {
 	        	throw new EasyException("inputStream is null");
 	        }
-	        prop.load(in);  
+	        prop.load(new InputStreamReader(in, "utf-8"));
 	        in.close();
-	        Iterator<Object> it = prop.keySet().iterator();
+	        Iterator<Entry<Object,Object>> it = prop.entrySet().iterator();
 	        while(it.hasNext())
 	        {
-	        	String key = it.next().toString();
-	        	config.put(key, prop.getProperty(key).trim());
+	        	Entry<Object,Object> en = it.next();
+	        	config.put((String)en.getKey(), (String)en.getValue());
 	        }
         }
 		catch(Exception e)
@@ -173,7 +173,7 @@ public class EasyConfig {
 		}
 	}
 
-	private static  String getFileData(String fileName) {
+	private static  String getFileData(String fileName) throws Exception {
 
 		File file = new File(fileName);
 		Long length = file.length();
@@ -186,7 +186,8 @@ public class EasyConfig {
 			logger.error(e.getMessage(),e);
 			return null;
 		}
-		return new String(fileContent);
+		String content = new String(fileContent);
+		return content;
 
 	}
 

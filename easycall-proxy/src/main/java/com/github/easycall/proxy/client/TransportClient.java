@@ -297,14 +297,7 @@ public final class TransportClient implements ClientMessageDispatcher {
         }
 
         if(session.seq != null){
-            ObjectNode newHead = Utils.json.createObjectNode();
-            Iterator<Map.Entry<String,JsonNode>> it = pkg.getHead().fields();
-            while (it.hasNext()){
-                Map.Entry<String,JsonNode> entry = it.next();
-                newHead.put(entry.getKey(),entry.getValue());
-            }
-            newHead.put("seq",session.seq);
-            pkg.setHead(newHead);
+            pkg.getHead().put("seq",session.seq);
         }
 
         session.timeout.cancel();

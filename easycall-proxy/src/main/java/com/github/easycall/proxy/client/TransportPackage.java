@@ -1,6 +1,7 @@
 package com.github.easycall.proxy.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyException;
 import com.github.easycall.util.Utils;
 import io.netty.buffer.ByteBuf;
@@ -19,7 +20,7 @@ public class TransportPackage {
 	final public static int ERROR_TIME_OUT = 1001;
 	final public static int ERROR_SERVER_INTERNAL = 1002;
 	final public static int ERROR_METHOD_NOT_FOUND = 1003;
-	private JsonNode head;
+	private ObjectNode head;
 	private ByteBuf body;
 	private byte format;
 	
@@ -33,7 +34,7 @@ public class TransportPackage {
 		format = 0;
 	}
 	
-	public TransportPackage(JsonNode head, ByteBuf body)
+	public TransportPackage(ObjectNode head, ByteBuf body)
 	{
 		this.head = head;
 		this.body = body;
@@ -108,14 +109,14 @@ public class TransportPackage {
 		if (getFormat() == FORMAT_MSGPACK){
 			byte [] headBytes = new byte[headLen];
 			data.getBytes(10,headBytes);
-			head = Utils.msgpack.readTree(headBytes);
+			head = Utils.msgpack.readValue(headBytes, ObjectNode.class);
 			body = data.slice(10+headLen,bodyLen);
 
 
 		} else if (getFormat() == FORMAT_JSON){
 			byte [] headBytes = new byte[headLen];
 			data.getBytes(10,headBytes);
-			head = Utils.json.readTree(headBytes);
+			head = Utils.json.readValue(headBytes,ObjectNode.class);
 			body = data.slice(10+headLen,bodyLen);
 		} else{
 			throw new EasyException("invalid package format");
@@ -123,11 +124,11 @@ public class TransportPackage {
 		return this;
 	}
 	
-	public JsonNode getHead() {
+	public ObjectNode getHead() {
 		return head;
 	}
 	
-	public TransportPackage setHead(JsonNode head)
+	public TransportPackage setHead(ObjectNode head)
 	{
 		this.head = head;
 		return this;

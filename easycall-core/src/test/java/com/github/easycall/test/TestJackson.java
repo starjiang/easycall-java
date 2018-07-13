@@ -21,6 +21,11 @@ public class TestJackson {
         node.put("dd",1);
 
         node.putPOJO("name",list);
+        String out = Utils.json.writeValueAsString(node);
+
+        ObjectNode node1 = Utils.json.readValue(out,ObjectNode.class);
+
+        System.out.println(node1.get("dd"));
 
         System.out.println(Utils.json.writeValueAsString(node));
     }

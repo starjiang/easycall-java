@@ -1,6 +1,6 @@
 package com.github.easycall.util;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
@@ -19,8 +19,8 @@ public class EasyPackage {
 	final public static int ERROR_TIME_OUT = 1001;
 	final public static int ERROR_SERVER_INTERNAL = 1002;
 	final public static int ERROR_METHOD_NOT_FOUND = 1003;
-	private JsonNode head;
-	private JsonNode body;
+	private ObjectNode head;
+	private ObjectNode body;
 	private byte format;
 	
 	public static EasyPackage newInstance()
@@ -33,7 +33,7 @@ public class EasyPackage {
 		format = 0;
 	}
 	
-	public EasyPackage(JsonNode head, JsonNode body)
+	public EasyPackage(ObjectNode head, ObjectNode body)
 	{
 		this.head = head;
 		this.body = body;
@@ -50,6 +50,10 @@ public class EasyPackage {
 	
 	public ByteBuf encode() throws Exception
 	{
+		if(head == null || body == null){
+			throw new EasyException("head or body is null");
+		}
+
 		if(getFormat() == FORMAT_MSGPACK)
 		{
 			CompositeByteBuf compBuf = Unpooled.compositeBuffer();
@@ -114,16 +118,16 @@ public class EasyPackage {
 			byte [] bodyBytes = new byte[bodyLen];
 			data.getBytes(10,headBytes);
 			data.getBytes(10+headLen,bodyBytes);
-			head = Utils.msgpack.readTree(headBytes);
-			body = Utils.msgpack.readTree(bodyBytes);
+			head = Utils.msgpack.readValue(headBytes,ObjectNode.class);
+			body = Utils.msgpack.readValue(bodyBytes,ObjectNode.class);
 
 		} else if (getFormat() == FORMAT_JSON){
 			byte [] headBytes = new byte[headLen];
 			byte [] bodyBytes = new byte[bodyLen];
 			data.getBytes(10,headBytes);
 			data.getBytes(10+headLen,bodyBytes);
-			head = Utils.json.readTree(headBytes);
-			body = Utils.json.readTree(bodyBytes);
+			head = Utils.json.readValue(headBytes,ObjectNode.class);
+			body = Utils.json.readValue(bodyBytes,ObjectNode.class);
 		} else{
 			throw new EasyException("invalid package format");
 		}
@@ -131,22 +135,22 @@ public class EasyPackage {
 		return this;
 	}
 	
-	public JsonNode getHead() {
+	public ObjectNode getHead() {
 		return head;
 	}
 	
-	public EasyPackage setHead(JsonNode head)
+	public EasyPackage setHead(ObjectNode head)
 	{
 		this.head = head;
 		return this;
 	}
 	
-	public JsonNode getBody()
+	public ObjectNode getBody()
 	{
 		return body;
 	}
 	
-	public EasyPackage setBody(JsonNode body)
+	public EasyPackage setBody(ObjectNode body)
 	{
 		this.body = body;
 		return this;

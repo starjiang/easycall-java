@@ -1,5 +1,4 @@
 package com.github.easycall.service;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyException;
 import com.github.easycall.util.EasyPackage;
@@ -9,8 +8,8 @@ import io.netty.channel.ChannelHandlerContext;
 public class Response
 {
     private int format;
-	private JsonNode head;
-	private JsonNode body;
+	private ObjectNode head;
+	private ObjectNode body;
 	private ChannelHandlerContext ctx;
 
     public Response setCtx(ChannelHandlerContext ctx) {
@@ -34,13 +33,13 @@ public class Response
         }
     }
 
-    public Response setHead(JsonNode head)
+    public Response setHead(ObjectNode head)
 	{
 		this.head = head;
 		return this;
 	}
 	
-	public JsonNode getHead()
+	public ObjectNode getHead()
 	{
 		return head;
 	}
@@ -51,7 +50,7 @@ public class Response
 		return this;
 	}
 	
-	public JsonNode getBody()
+	public ObjectNode getBody()
 	{
 		return body;
 	}
