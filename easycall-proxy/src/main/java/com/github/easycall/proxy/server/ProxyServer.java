@@ -64,6 +64,8 @@ public class ProxyServer {
             
             log.info("tcp listen port "+config.getPort());
 
+            HttpHandler httpHandler = new HttpHandler(client,config.getBackendTimeout());
+
             ServerBootstrap httpBoot = new ServerBootstrap();
             httpBoot.option(ChannelOption.SO_BACKLOG, ACCEPT_BACKLOG);
             httpBoot.group(bossGroupHttp, workerGroupHttp)
@@ -81,7 +83,7 @@ public class ProxyServer {
 	                if(config.isHttpEnableGZip()){
 	                    p.addLast(new HttpContentCompressor());
 	                }
-	                p.addLast(new HttpHandler(client,config.getBackendTimeout()));
+	                p.addLast(httpHandler);
             	}
 			});
 

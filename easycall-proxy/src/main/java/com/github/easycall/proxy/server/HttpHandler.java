@@ -28,6 +28,7 @@ import com.github.easycall.proxy.util.PackageFilter;
 import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.handler.codec.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
+@Sharable
 public class HttpHandler extends ChannelInboundHandlerAdapter {
 
 	static Logger logger = LoggerFactory.getLogger(HttpHandler.class);

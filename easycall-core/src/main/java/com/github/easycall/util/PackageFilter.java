@@ -1,9 +1,6 @@
 package com.github.easycall.util;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.github.easycall.exception.EasyInvalidPkgException;
 
 import io.netty.buffer.ByteBuf;
@@ -12,8 +9,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 
 public class PackageFilter extends ByteToMessageDecoder {
-
-	private static Logger log = LoggerFactory.getLogger(PackageFilter.class);
 	
 	@Override
 	protected void decode(ChannelHandlerContext ctx, ByteBuf buf,List<Object> out) throws Exception 

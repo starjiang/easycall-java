@@ -5,15 +5,11 @@ import com.github.easycall.util.EasyPackage;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 
 public class PackageFilter extends ByteToMessageDecoder {
-
-	private static Logger log = LoggerFactory.getLogger(PackageFilter.class);
 	
 	@Override
 	protected void decode(ChannelHandlerContext ctx, ByteBuf buf,List<Object> out) throws Exception 
