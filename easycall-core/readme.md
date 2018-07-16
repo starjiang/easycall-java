@@ -34,6 +34,10 @@ easycall 具体协议如下
 * requestIp string 请求ip，内网请求为请求机器ip,外网请求为外网ip,可选字段
 * traceId string 请求跟踪id,全局唯一，可选字段
 * seq long 内网异步调用时,回调时用，可选字段
+* ret int 错误码 必填字段，0 为正常返回，非0 为错误码
+* msg string 错误信息  可选字段，ret 非0，时需要设置msg
+* uid long 用户id 可选字段
+* sig string 用户登录签名 可选字段
 <pre>
 头部字段可以随意添加，建议请求的一些公用字段放到头部，比如登录验证的 userId,token
 </pre>

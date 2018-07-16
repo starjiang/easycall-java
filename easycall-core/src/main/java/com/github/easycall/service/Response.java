@@ -1,6 +1,7 @@
 package com.github.easycall.service;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyException;
+import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.EasyPackage;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -8,7 +9,7 @@ import io.netty.channel.ChannelHandlerContext;
 public class Response
 {
     private int format;
-	private ObjectNode head;
+	private EasyHead head;
 	private ObjectNode body;
 	private ChannelHandlerContext ctx;
 
@@ -24,8 +25,7 @@ public class Response
     public void flush() throws Exception{
         if (ctx!= null){
 
-            EasyPackage respPkg = new EasyPackage(getHead(), getBody());
-            respPkg.setFormat((byte) format);
+            EasyPackage respPkg = new EasyPackage((byte) format,head, body);
             ctx.writeAndFlush(Unpooled.wrappedBuffer(respPkg.encode()));
 
         }else{
@@ -33,13 +33,13 @@ public class Response
         }
     }
 
-    public Response setHead(ObjectNode head)
+    public Response setHead(EasyHead head)
 	{
 		this.head = head;
 		return this;
 	}
 	
-	public ObjectNode getHead()
+	public EasyHead getHead()
 	{
 		return head;
 	}

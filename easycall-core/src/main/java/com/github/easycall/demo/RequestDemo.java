@@ -18,10 +18,7 @@ public class RequestDemo {
 		{
 			EasyClient client = new EasyClient(zkConnStr,4, LoadBalance.LB_ROUND_ROBIN);
 
-			System.out.println("client...");
-			ObjectNode reqBody = Utils.json.createObjectNode();
-			reqBody.put("uid",100000).put("seq",0);
-
+			ObjectNode reqBody = Utils.json.createObjectNode().put("uid",100000).put("seq",0);
 			EasyPackage pkg = client.syncRequest("profile","getProfile",reqBody, 1000);
 			System.out.println(pkg.getBody().toString());
 

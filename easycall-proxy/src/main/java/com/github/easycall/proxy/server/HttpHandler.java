@@ -15,16 +15,17 @@
  */
 package com.github.easycall.proxy.server;
 
+import java.lang.reflect.Field;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyInvalidPkgException;
 import com.github.easycall.proxy.client.ResponseFuture;
 import com.github.easycall.proxy.client.TransportClient;
 import com.github.easycall.proxy.client.TransportPackage;
 import com.github.easycall.proxy.util.PackageFilter;
+import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
 import io.netty.handler.codec.http.*;
@@ -36,9 +37,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
@@ -47,10 +46,18 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 	static Logger logger = LoggerFactory.getLogger(HttpHandler.class);
     private TransportClient client;
     private int timeout;
+    private HashMap<String,Field> fields;
 
 	public HttpHandler(TransportClient client, int timeout) {
 		this.client = client;
 	    this.timeout = timeout;
+
+	    Field [] fieldList = EasyHead.class.getDeclaredFields();
+	    this.fields = new HashMap<>();
+
+	    for(int i=0;i<fieldList.length;i++){
+            this.fields.put(fieldList[i].getName(),fieldList[i]);
+        }
 	}
 
 	@Override
@@ -65,30 +72,19 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 				String path = uri.getPath();
 
 				if (!path.equals("/call") && !path.equals("/rawcall")) {
-					ctx.writeAndFlush(
-							new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND,
-									Unpooled.wrappedBuffer("{\"msg\":\"page not found\",\"ret\":1002}"
-											.getBytes()))).addListener(
-							ChannelFutureListener.CLOSE);
+	               respData(ctx,Unpooled.wrappedBuffer("Not Found".getBytes()),NOT_FOUND,false,"text/plain");
 					return;
 				}
 
 				if(!req.method().name().equals("POST")){
-                    ctx.writeAndFlush(
-                            new DefaultFullHttpResponse(HTTP_1_1, METHOD_NOT_ALLOWED,
-                                    Unpooled.wrappedBuffer("{\"msg\":\"method not allowed\",\"ret\":1002}"
-                                            .getBytes()))).addListener(
-                            ChannelFutureListener.CLOSE);
+                    respData(ctx,Unpooled.wrappedBuffer("Method Not Allowed".getBytes()),METHOD_NOT_ALLOWED,false,"text/plain");
                     return;
                 }
 
                 ByteBuf content = req.content();
 
                 if(content.readableBytes() == 0){
-
-                    ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST,
-                            Unpooled.wrappedBuffer("{\"msg\":\"bad request\",\"ret\":1002}".getBytes())))
-                            .addListener(ChannelFutureListener.CLOSE);
+                    respData(ctx,Unpooled.wrappedBuffer("Bad Request".getBytes()),BAD_REQUEST,false,"text/plain");
                     return;
                 }
 
@@ -99,7 +95,8 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
                 }
 			}
 		} catch (Throwable e) {
-			respError(ctx, e);
+			respData(ctx,Unpooled.wrappedBuffer(e.getMessage().getBytes()),INTERNAL_SERVER_ERROR,false,"text/plain");
+			logger.error(e.getMessage(),e);
 		}
 	}
 
@@ -111,45 +108,53 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
             throw new EasyInvalidPkgException("invalid pkg");
         }
         pkg.decode(req.content());
-        requestAndResponse(ctx,req,pkg,true);
+
+        boolean keepAlive = HttpUtil.isKeepAlive(req);
+        requestRawAndResponse(ctx,pkg,keepAlive);
 
     }
 
-    private void requestAndResponse(ChannelHandlerContext ctx,FullHttpRequest req,TransportPackage pkg,boolean respFull) throws Exception{
+    private void requestRawAndResponse(ChannelHandlerContext ctx,TransportPackage reqPkg,final boolean keepAlive){
 
-        ResponseFuture responseFuture = client.asyncRequest(pkg, timeout);
+	    try{
+	        ResponseFuture responseFuture = client.asyncRequest(reqPkg, timeout);
+            responseFuture.setCallback(future -> {
+                try {
+                    if (future.isException()) {
 
-        responseFuture.setCallback(future -> {
-            if(future.isException()){
-                respError(ctx,future.getException());
-            }else{
-                TransportPackage respPkg = future.getResult();
+                        EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat())
+                                .setHead(reqPkg.getHead()).setBody(Utils.json.createObjectNode());
+                        respPkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
+                        respPkg.getHead().setMsg(future.getException().getMessage());
+                        ByteBuf respBuf = respPkg.encode();
+                        respData(ctx, respBuf, OK, keepAlive, "application/octet-stream");
+                        logger.error(future.getException().getMessage(),future.getException());
 
-                boolean keepAlive = isKeepAlive(req);
-                ByteBuf respBuf;
-                if (respFull){
-                    try{
-                        respBuf = respPkg.encode();
-                    }catch (Exception e){
-                        logger.error(e.getMessage(),e);
-                        return;
+                    } else {
+                        TransportPackage respPkg = future.getResult();
+                        ByteBuf respBuf = respPkg.encode();
+                        respData(ctx,respBuf,OK,keepAlive,"application/octet-stream");
                     }
-                }else{
-                    respBuf = respPkg.getBody();
+                }catch (Exception e){
+                    logger.error(e.getMessage(),e);
                 }
+            });
+	    }catch(Exception e){
 
-                FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, respBuf);
-                response.headers().set(CONTENT_TYPE, "application/json");
-                response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+	        reqPkg.getBody().release();
+            EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat())
+                    .setHead(reqPkg.getHead()).setBody(Utils.json.createObjectNode());
+            respPkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
+            respPkg.getHead().setMsg(e.getMessage());
 
-                if (!keepAlive) {
-                    ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
-                } else {
-                    response.headers().set(CONNECTION, Values.KEEP_ALIVE);
-                    ctx.writeAndFlush(response);
-                }
+            try{
+                ByteBuf respBuf = respPkg.encode();
+                respData(ctx, respBuf, OK, keepAlive, "application/octet-stream");
+            }catch (Exception e1){
+                logger.error(e.getMessage(),e);
             }
-        });
+            logger.error(e.getMessage(),e);
+        }
     }
 
 	private void processJsonRequest(ChannelHandlerContext ctx,FullHttpRequest req) throws  Exception{
@@ -159,8 +164,7 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
         Iterator<Entry<String, String>> it = headers.entries().iterator();
 
         TransportPackage  pkg = TransportPackage.newInstance().setFormat(TransportPackage.FORMAT_JSON);
-        ObjectNode head = Utils.json.createObjectNode();
-
+        EasyHead head = EasyHead.newInstance();
         pkg.setHead(head);
 
         while (it.hasNext()) {
@@ -170,30 +174,79 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
                 String keySuffix = key.substring(12);
                 String keyPrefix = key.substring(11,12);
                 String fieldName = keyPrefix.toLowerCase()+keySuffix;
-                head.put(fieldName,en.getValue());
+                Field field = fields.get(fieldName);
+                if(field == null){
+                    continue;
+                }
+                field.setAccessible(true);
+                if(field.getType().getName().equals("java.lang.String")){
+                    field.set(head,en.getValue());
+                }else if (field.getType().getName().equals("java.lang.Long")){
+                    field.set(head,Long.valueOf(en.getValue()));
+                }else if(field.getType().getName().equals("java.lang.Integer")){
+                    field.set(head,Integer.valueOf(en.getValue()));
+                }else if(field.getType().getName().equals("java.lang.Boolean")){
+                    field.set(head,Boolean.valueOf(en.getValue()));
+                }else if(field.getType().getName().equals("java.lang.Short")){
+                    field.set(head,Short.valueOf(en.getValue()));
+                }
             }
         }
 
         pkg.setBody(req.content());
 
-        requestAndResponse(ctx,req,pkg,false);
+        boolean keepAlive = HttpUtil.isKeepAlive(req);
+
+        requestJsonAndResponse(ctx,pkg,keepAlive);
 
     }
 
-	private void respError(final ChannelHandlerContext ctx, Throwable e) {
-	    try{
-            ObjectNode body = Utils.json.createObjectNode();
-            body.put("ret", EasyPackage.ERROR_SERVER_INTERNAL);
-            body.put("msg", e.getMessage());
-            byte [] data = Utils.json.writeValueAsBytes(body);
+    private void requestJsonAndResponse(ChannelHandlerContext ctx,TransportPackage reqPkg,final boolean keepAlive){
 
-            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR,Unpooled.wrappedBuffer(data));
-            response.headers().set(CONTENT_TYPE, "application/json");
-            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+        try{
+            ResponseFuture responseFuture = client.asyncRequest(reqPkg, timeout);
+            responseFuture.setCallback(future -> {
+                try {
+                    if (future.isException()) {
+
+                        ByteBuf respBuf = Unpooled.wrappedBuffer(future.getException().getMessage().getBytes());
+                        respData(ctx, respBuf,INTERNAL_SERVER_ERROR, keepAlive, "text/plain");
+                        logger.error(future.getException().getMessage(),future.getException());
+                    } else {
+                        TransportPackage respPkg = future.getResult();
+                        int ret = respPkg.getHead().getRet() == null ? 0 : respPkg.getHead().getRet();
+                        String msg = respPkg.getHead().getMsg() == null ? "ok" : respPkg.getHead().getMsg();
+                        ByteBuf respBuf = respPkg.getBody();
+                        HttpResponseStatus status = OK;
+                        String contentType = "application/json";
+                        if(ret != 0){
+                            contentType = "text/plain";
+                            status = INTERNAL_SERVER_ERROR;
+                            respBuf.release();
+                            respBuf = Unpooled.wrappedBuffer(msg.getBytes());
+                        }
+                        respData(ctx,respBuf,status,keepAlive,contentType);
+                    }
+                }catch (Exception e){
+                    logger.error(e.getMessage(),e);
+                }
+            });
+        }catch(Exception e){
+            reqPkg.getBody().release();
+            ByteBuf respBuf = Unpooled.wrappedBuffer(e.getMessage().getBytes());
+            respData(ctx, respBuf, INTERNAL_SERVER_ERROR, keepAlive, "text/plain");
+            logger.error(e.getMessage(),e);
+        }
+    }
+
+	private void respData(ChannelHandlerContext ctx,ByteBuf respBuf,HttpResponseStatus status,boolean keepAlive,String contentType) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status,respBuf);
+        response.headers().set(CONTENT_TYPE, contentType);
+        response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+        if(keepAlive){
+            ctx.writeAndFlush(response);
+        }else{
             ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
-            logger.error("Exception:" + e.getMessage(), e);
-	    }catch (Exception e1){
-	        logger.error("Exception:" + e1.getMessage(), e1);
         }
 	}
 

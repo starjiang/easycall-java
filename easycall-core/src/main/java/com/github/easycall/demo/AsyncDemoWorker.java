@@ -17,7 +17,6 @@ public class AsyncDemoWorker {
 
         //log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
-
         ObjectNode respBoby = Utils.json.createObjectNode();
         respBoby.put("msg","ok");
         respBoby.put("ret",0);

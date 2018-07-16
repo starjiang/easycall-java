@@ -60,8 +60,8 @@ public class MessageHandler extends ChannelInboundHandlerAdapter {
 
 						EasyPackage respPkg = EasyPackage.newInstance();
 						ObjectNode respBody = Utils.json.createObjectNode();
-						respBody.put("msg",future.getException().getMessage());
-						respBody.put("ret", EasyPackage.ERROR_SERVER_INTERNAL);
+						pkg.getHead().setMsg(future.getException().getMessage());
+						pkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
 						respPkg.setHead(pkg.getHead()).setBody(respBody);
 						ctx.writeAndFlush(respPkg.encode());
 						logger.error("req={}",pkg.getHead().toString(),future.getException());
@@ -79,8 +79,8 @@ public class MessageHandler extends ChannelInboundHandlerAdapter {
     	{
 			EasyPackage respPkg = EasyPackage.newInstance();
 			ObjectNode respBody = Utils.json.createObjectNode();
-			respBody.put("msg",e.getMessage());
-			respBody.put("ret", EasyPackage.ERROR_SERVER_INTERNAL);
+			pkg.getHead().setMsg(e.getMessage());
+			pkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
 			respPkg.setHead(pkg.getHead()).setBody(respBody);
 			ctx.writeAndFlush(respPkg.encode());
 			buf.release();

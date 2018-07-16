@@ -19,7 +19,7 @@ public class EasyPackage {
 	final public static int ERROR_TIME_OUT = 1001;
 	final public static int ERROR_SERVER_INTERNAL = 1002;
 	final public static int ERROR_METHOD_NOT_FOUND = 1003;
-	private ObjectNode head;
+	private EasyHead head;
 	private ObjectNode body;
 	private byte format;
 	
@@ -33,8 +33,9 @@ public class EasyPackage {
 		format = 0;
 	}
 	
-	public EasyPackage(ObjectNode head, ObjectNode body)
+	public EasyPackage(byte format,EasyHead head, ObjectNode body)
 	{
+		this.format = format;
 		this.head = head;
 		this.body = body;
 	}
@@ -118,7 +119,7 @@ public class EasyPackage {
 			byte [] bodyBytes = new byte[bodyLen];
 			data.getBytes(10,headBytes);
 			data.getBytes(10+headLen,bodyBytes);
-			head = Utils.msgpack.readValue(headBytes,ObjectNode.class);
+			head = Utils.msgpack.readValue(headBytes,EasyHead.class);
 			body = Utils.msgpack.readValue(bodyBytes,ObjectNode.class);
 
 		} else if (getFormat() == FORMAT_JSON){
@@ -126,7 +127,7 @@ public class EasyPackage {
 			byte [] bodyBytes = new byte[bodyLen];
 			data.getBytes(10,headBytes);
 			data.getBytes(10+headLen,bodyBytes);
-			head = Utils.json.readValue(headBytes,ObjectNode.class);
+			head = Utils.json.readValue(headBytes,EasyHead.class);
 			body = Utils.json.readValue(bodyBytes,ObjectNode.class);
 		} else{
 			throw new EasyException("invalid package format");
@@ -135,11 +136,11 @@ public class EasyPackage {
 		return this;
 	}
 	
-	public ObjectNode getHead() {
+	public EasyHead getHead() {
 		return head;
 	}
 	
-	public EasyPackage setHead(ObjectNode head)
+	public EasyPackage setHead(EasyHead head)
 	{
 		this.head = head;
 		return this;

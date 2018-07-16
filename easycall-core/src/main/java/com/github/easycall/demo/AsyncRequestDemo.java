@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.client.EasyClient;
 import com.github.easycall.client.ResponseFuture;
 import com.github.easycall.client.lb.LoadBalance;
+import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
 
@@ -12,7 +13,7 @@ public class AsyncRequestDemo {
 
     public static void main(String[] args) throws Exception
     {
-        String zkConnStr = "127.0.0.1:2181";
+        String zkConnStr = "172.28.2.162:2181";
 
         try
         {
@@ -20,11 +21,8 @@ public class AsyncRequestDemo {
 
             while(true){
                 for(int i=0;i<10;i++){
-                    ObjectNode reqHead = Utils.json.createObjectNode();
-                    ObjectNode reqBody = Utils.json.createObjectNode();
-                    reqHead.put("service","profile");
-                    reqHead.put("method","getProfile");
-                    reqBody.put("uid",100000);
+                    EasyHead reqHead = EasyHead.newInstance().setService("profile").setMethod("getProfile");
+                    ObjectNode reqBody = Utils.json.createObjectNode().put("uid",100000);
 
                     try{
                         ResponseFuture future = client.asyncRequest(EasyPackage.FORMAT_MSGPACK,reqHead, reqBody, 1000);

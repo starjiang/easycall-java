@@ -11,7 +11,7 @@ public class CircuitBreakerDemo {
 
     public static void main(String[] args) throws Exception
     {
-        String zkConnStr = "127.0.0.1:2181";
+        String zkConnStr = "172.28.2.162:2181";
 
         try
         {

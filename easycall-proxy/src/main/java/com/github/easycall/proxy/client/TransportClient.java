@@ -15,6 +15,7 @@ import com.github.easycall.exception.EasyServiceNotFoundException;
 import com.github.easycall.exception.EasyTimeoutException;
 import com.github.easycall.proxy.util.PackageFilter;
 import com.github.easycall.util.DaemonThreadFactory;
+import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
 import io.netty.buffer.ByteBuf;
@@ -261,11 +262,10 @@ public final class TransportClient implements ClientMessageDispatcher {
             return;
         }
 
-        JsonNode head = pkg.getHead();
+        EasyHead head = pkg.getHead();
 
-        Long seq = head.get("seq") == null ? null : head.get("seq").asLong();
-
-        String name = head.get("service") == null ? null : head.get("service").asText();
+        Long seq = head.getSeq();
+        String name = head.getService();
 
         if(seq == null){
             log.error("response head have no seq field resp={}",head.toString());
@@ -297,7 +297,7 @@ public final class TransportClient implements ClientMessageDispatcher {
         }
 
         if(session.seq != null){
-            pkg.getHead().put("seq",session.seq);
+            pkg.getHead().setSeq(session.seq);
         }
 
         session.timeout.cancel();
@@ -362,30 +362,21 @@ public final class TransportClient implements ClientMessageDispatcher {
     {
         ResponseFuture future = new ResponseFuture();
 
-        ObjectNode head = Utils.json.createObjectNode();
+        EasyHead head = pkg.getHead();
 
-        Iterator<Map.Entry<String, JsonNode>> iterator =  pkg.getHead().fields();
-
-        while (iterator.hasNext()){
-            Map.Entry<String,JsonNode> entry = iterator.next();
-            head.put(entry.getKey(),entry.getValue());
-        }
-
-        pkg.setHead(head);
-
-        String name = head.get("service") == null ? null : head.get("service").asText();
+        String name = head.getService();
 
         if (name == null){
             throw new EasyException("service field not found");
         }
 
-        String method = head.get("method") == null ? null : head.get("method").asText();
+        String method = head.getMethod();
 
         if (method == null){
             throw new EasyException("method field not found");
         }
 
-        String routeKey = head.get("routeKey") == null ? "":head.get("routeKey").asText();
+        String routeKey = head.getRouteKey() == null ? "":head.getRouteKey();
 
         Node node = nodeMgr.getNode(name,loadBalanceType,routeKey);
 
@@ -397,11 +388,11 @@ public final class TransportClient implements ClientMessageDispatcher {
 
         long sessionId = seqNo.addAndGet(1);
 
-        Long seq = head.get("seq") == null ? null : head.get("seq").asLong();
+        Long seq = head.getSeq();
 
         Session session = new Session(node, sessionId,seq,pkg, future);
 
-        head.put("seq", sessionId);
+        head.setSeq(sessionId);
 
         ConcurrentLinkedQueue<Session> sessionQueue;
         ConnStatus status;

@@ -56,18 +56,18 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
     {
         try
         {
-            String callMethod = request.getHead().get("method") == null ? null: request.getHead().get("method").asText();
+            String callMethod = request.getHead().getMethod();
 
             if(callMethod == null){
-                throw new EasyException("head method feild not exsit");
+                throw new EasyException("head method field not settle");
             }
 
             Method method = methodMap.get(callMethod);
             if(method == null)
             {
                 ObjectNode respBody = Utils.json.createObjectNode();
-                respBody.put("msg","method not found:"+callMethod);
-                respBody.put("ret", EasyPackage.ERROR_METHOD_NOT_FOUND);
+                request.getHead().setMsg("method not found:"+callMethod);
+                request.getHead().setRet(EasyPackage.ERROR_METHOD_NOT_FOUND);
                 response.setHead(request.getHead()).setBody(respBody).flush();
                 log.error("method not found,req={}",request.getHead().toString());
             }
@@ -90,8 +90,8 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
         catch (Exception e)
         {
             ObjectNode respBody = Utils.json.createObjectNode();
-            respBody.put("msg",e.getMessage());
-            respBody.put("ret", EasyPackage.ERROR_SERVER_INTERNAL);
+            request.getHead().setMsg(e.getMessage());
+            request.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
             try{
                 response.setHead(request.getHead()).setBody(respBody).flush();
             }catch (Exception e1){

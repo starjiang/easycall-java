@@ -1,5 +1,7 @@
 package com.github.easycall.test;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.Utils;
 import org.junit.Test;
 
@@ -28,5 +30,22 @@ public class TestJackson {
         System.out.println(node1.get("dd"));
 
         System.out.println(Utils.json.writeValueAsString(node));
+    }
+
+    @Test
+    public void TestReadValue() throws  Exception{
+
+        ObjectNode node = Utils.json.createObjectNode();
+
+        node.put("service","profile");
+        node.put("method","getProfile");
+        node.put("uid1",100000L);
+
+        byte [] out = Utils.json.writeValueAsBytes(node);
+
+        EasyHead head = Utils.json.readValue(out, EasyHead.class);
+
+        System.out.println("head="+head.toString());
+
     }
 }

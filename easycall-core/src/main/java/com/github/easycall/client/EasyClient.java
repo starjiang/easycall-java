@@ -35,7 +35,7 @@ import io.netty.util.TimerTask;
 class Session
 {
     public int format;
-    public ObjectNode head;
+    public EasyHead head;
     public ObjectNode body;
     public ResponseFuture future;
     public long sessionId;
@@ -44,7 +44,7 @@ class Session
     public Node node;
     public Timeout timeout;
 
-    public Session(Node node,long sessionId,Long seq,int format,ObjectNode head,ObjectNode body,ResponseFuture future) {
+    public Session(Node node,long sessionId,Long seq,int format,EasyHead head,ObjectNode body,ResponseFuture future) {
         this.sessionId = sessionId;
         this.format = format;
         this.head = head;
@@ -253,9 +253,8 @@ public final class EasyClient implements ClientMessageDispatcher {
 
         EasyPackage pkg = (EasyPackage)msg;
 
-        Long seq = pkg.getHead().get("seq") == null ? null : pkg.getHead().get("seq").asLong();
-
-        String name = pkg.getHead().get("service") == null ? null : pkg.getHead().get("service").asText();
+        Long seq = pkg.getHead().getSeq();
+        String name = pkg.getHead().getService();
 
         if(seq == null){
             log.error("response head have not seq field resp={}",pkg.getHead().toString());
@@ -283,7 +282,7 @@ public final class EasyClient implements ClientMessageDispatcher {
         }
 
         if(session.seq != null){
-            pkg.getHead().put("seq",session.seq);
+            pkg.getHead().setSeq(session.seq);
         }
 
         session.timeout.cancel();
@@ -345,7 +344,7 @@ public final class EasyClient implements ClientMessageDispatcher {
         }
     }
 
-    public EasyPackage syncRequest(int format,ObjectNode head,ObjectNode body, int timeout,String ip,int port) throws Exception{
+    public EasyPackage syncRequest(int format,EasyHead head,ObjectNode body, int timeout,String ip,int port) throws Exception{
 
         ResponseFuture responseFuture = asyncRequest(format,head,body,timeout,ip,port);
 
@@ -358,46 +357,46 @@ public final class EasyClient implements ClientMessageDispatcher {
         return pkg;
     }
 
-    public EasyPackage syncRequest(int format,ObjectNode head,ObjectNode body, int timeout) throws Exception{
+    public EasyPackage syncRequest(int format,EasyHead head,ObjectNode body, int timeout) throws Exception{
         return syncRequest(format,head,body,timeout,null,0);
     }
 
 
     public EasyPackage syncRequest(String service,String method,ObjectNode body, int timeout) throws Exception {
 
-        ObjectNode head = Utils.json.createObjectNode();
-        head.put("service",service).put("method",method);
+        EasyHead head = EasyHead.newInstance();
+        head.setService(service).setMethod(method);
         return syncRequest(EasyPackage.FORMAT_MSGPACK,head,body,timeout);
     }
 
     public ResponseFuture asyncRequest(String service,String method,ObjectNode body, int timeout) throws Exception {
 
-        ObjectNode head = Utils.json.createObjectNode();
-        head.put("service",service).put("method",method);
+        EasyHead head = EasyHead.newInstance();
+        head.setService(service).setMethod(method);
         return asyncRequest(EasyPackage.FORMAT_MSGPACK,head,body,timeout);
     }
 
-    public ResponseFuture asyncRequest(int format,ObjectNode head,ObjectNode body, int timeout) throws Exception {
+    public ResponseFuture asyncRequest(int format,EasyHead head,ObjectNode body, int timeout) throws Exception {
         return asyncRequest(format,head,body,timeout,null,0);
     }
 
-    public ResponseFuture asyncRequest(int format,ObjectNode head,ObjectNode body, int timeout,String ip,int port) throws Exception
+    public ResponseFuture asyncRequest(int format,EasyHead head,ObjectNode body, int timeout,String ip,int port) throws Exception
     {
         ResponseFuture future = new ResponseFuture();
 
-        String name = head.get("service") == null ? null : head.get("service").asText();
+        String name = head.getService();
 
         if (name == null){
             throw new EasyException("service field not found");
         }
 
-        String method = head.get("method") == null ? null : head.get("method").asText();
+        String method = head.getMethod();
 
         if (method == null){
             throw new EasyException("method field not found");
         }
 
-        String routeKey = head.get("routeKey") == null ? "":head.get("routeKey").asText();
+        String routeKey = head.getRouteKey() == null ? "" : head.getRouteKey();
 
         Node node;
         if(ip != null){
@@ -414,11 +413,11 @@ public final class EasyClient implements ClientMessageDispatcher {
 
         long sessionId = seqNo.addAndGet(1);
 
-        Long seq = head.get("seq") == null ? null : head.get("seq").asLong();
+        Long seq = head.getSeq();
 
         Session session = new Session(node,sessionId,seq,format, head, body, future);
 
-        head.put("seq", sessionId);
+        head.setSeq(sessionId);
 
         ConcurrentLinkedQueue<Session> sessionQueue;
         ConnStatus status;

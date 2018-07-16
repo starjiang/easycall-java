@@ -46,7 +46,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
             int routeHash = 0;
             if(msg.getMsg() instanceof EasyPackage){
                 EasyPackage pkg = (EasyPackage)msg.getMsg();
-                String routeKey = pkg.getHead().get("routeKey") == null ? "" : pkg.getHead().get("routeKey").asText();
+                String routeKey = pkg.getHead().getRouteKey() == null ? "" : pkg.getHead().getRouteKey();
                 routeHash = Utils.hash(routeKey);
             }
             int index = routeHash % threadList.size();
@@ -181,18 +181,18 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
     {
         try
         {
-            String callMethod = request.getHead().get("method") == null ? null: request.getHead().get("method").asText();
+            String callMethod = request.getHead().getMethod();
 
             if(callMethod == null){
-                throw new EasyException("head method feild not exsit");
+                throw new EasyException("head method feild not settle");
             }
 
             Method method = methodMap.get(callMethod);
             if(method == null)
             {
                 ObjectNode respBody = Utils.json.createObjectNode();
-                respBody.put("msg","method not found:"+callMethod);
-                respBody.put("ret", EasyPackage.ERROR_METHOD_NOT_FOUND);
+                request.getHead().setMsg("method not found:"+callMethod);
+                request.getHead().setRet(EasyPackage.ERROR_METHOD_NOT_FOUND);
                 response.setHead(request.getHead()).setBody(respBody);
                 log.error("method not found,req={}",request.getHead().toString());
             }
@@ -206,8 +206,8 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
         catch (Exception e)
         {
             ObjectNode respBody = Utils.json.createObjectNode();
-            respBody.put("msg",e.getMessage());
-            respBody.put("ret", EasyPackage.ERROR_SERVER_INTERNAL);
+            request.getHead().setMsg(e.getMessage());
+            request.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
             response.setHead(request.getHead()).setBody(respBody);
             log.error("req={}",request.getHead().toString(),e);
 

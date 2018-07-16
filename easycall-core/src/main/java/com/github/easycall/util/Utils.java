@@ -1,5 +1,6 @@
 package com.github.easycall.util;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.easycall.exception.EasyException;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
@@ -12,6 +13,11 @@ public class Utils {
     final public static ObjectMapper msgpack = new ObjectMapper(new MessagePackFactory());
     final public static String ZOOKEEPER_SERVICE_PREFIX="/easycall/services";
     final public static String ZOOKEEPER_CONFIG_PREFIX="/easycall/config";
+
+    static {
+        Utils.json.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
+        Utils.msgpack.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
+    }
 
     public static String getLocalIp() throws Exception
     {

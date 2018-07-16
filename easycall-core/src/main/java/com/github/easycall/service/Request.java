@@ -2,17 +2,18 @@ package com.github.easycall.service;
 
 import java.net.SocketAddress;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.easycall.util.EasyHead;
 
 
 public class Request
 {
 	private int format;
-	private ObjectNode head;
+	private EasyHead head;
 	private ObjectNode body;
 	private long createTime;
 	SocketAddress address;
 	
-	public Request(int format,SocketAddress address,long createTime,ObjectNode head,ObjectNode body)
+	public Request(int format,SocketAddress address,long createTime,EasyHead head,ObjectNode body)
 	{
 		this.address = address;
 		this.createTime = createTime;
@@ -26,7 +27,7 @@ public class Request
 		return createTime;
 	}
 	
-	public ObjectNode getHead()
+	public EasyHead getHead()
 	{
 		return head;
 	}
