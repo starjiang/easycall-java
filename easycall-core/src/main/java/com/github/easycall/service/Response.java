@@ -35,6 +35,9 @@ public class Response
 
     public Response setHead(EasyHead head)
 	{
+		if (head != null && head.getRet() == null){
+			head.setRet(0).setMsg("ok");
+		}
 		this.head = head;
 		return this;
 	}
