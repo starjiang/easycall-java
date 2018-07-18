@@ -2,6 +2,7 @@ package com.github.easycall.demo;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.service.Request;
 import com.github.easycall.service.Response;
+import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.EasyMethod;
 
 import com.github.easycall.util.Utils;
@@ -15,12 +16,15 @@ public class AsyncDemoWorker {
     @EasyMethod(method="getProfile")
     public void onGetProfile(Request request, Response response) throws Exception {
 
-        //log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
+        log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
         ObjectNode respBoby = Utils.json.createObjectNode();
-        respBoby.put("msg","ok");
-        respBoby.put("ret",0);
-        response.setHead(request.getHead()).setBody(respBoby).flush();
+        ObjectNode info =  respBoby.putObject("info");
+        info.put("name","hello");
+        info.put("tag","xxxxxxxx");
+        info.put("headPic","http://www.xxxx.com/xxx/xxxx.jpg");
+        info.put("uid",10000);
+        response.setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby).flush();
     }
 
     @EasyMethod(method="setProfile")
@@ -32,7 +36,7 @@ public class AsyncDemoWorker {
 
         respBoby.put("msg","ok");
         respBoby.put("ret",0);
-        response.setHead(request.getHead()).setBody(respBoby).flush();
+        response.setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby).flush();
     }
 
 }

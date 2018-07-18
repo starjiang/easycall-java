@@ -15,13 +15,15 @@ public class SyncDemoWorker {
     @EasyMethod(method="getProfile")
     public void onGetProfile(Request request, Response response) {
     	
-    	//log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
-    	
+    	log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
     	ObjectNode respBoby = Utils.json.createObjectNode();
-    	respBoby.put("msg","ok");
-    	respBoby.put("ret",0);
-    	response.setHead(request.getHead()).setBody(respBoby);
+    	ObjectNode info =  respBoby.putObject("info");
+		info.put("name","hello");
+		info.put("tag","xxxxxxxx");
+		info.put("headPic","http://www.xxxx.com/xxx/xxxx.jpg");
+		info.put("uid",10000);
+    	response.setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby);
     }
     
     @EasyMethod(method="setProfile")
@@ -34,7 +36,7 @@ public class SyncDemoWorker {
 
     	respBoby.put("msg","ok");
     	respBoby.put("ret",0);
-    	response.setHead(request.getHead()).setBody(respBoby);
+    	response.setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby);
     }
 
 }

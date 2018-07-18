@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.client.*;
+import com.github.easycall.client.lb.LoadBalance;
 import com.github.easycall.exception.EasyConnectException;
 import com.github.easycall.exception.EasyException;
 import com.github.easycall.exception.EasyServiceNotFoundException;
@@ -377,6 +378,10 @@ public final class TransportClient implements ClientMessageDispatcher {
         }
 
         String routeKey = head.getRouteKey() == null ? "":head.getRouteKey();
+
+        if(!routeKey.isEmpty()){
+            loadBalanceType = LoadBalance.LB_CONSISTENT_HASH;
+        }
 
         Node node = nodeMgr.getNode(name,loadBalanceType,routeKey);
 
