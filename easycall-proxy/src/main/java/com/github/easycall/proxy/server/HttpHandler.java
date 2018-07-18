@@ -19,6 +19,7 @@ import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import com.github.easycall.exception.EasyInvalidPkgException;
 import com.github.easycall.proxy.client.ResponseFuture;
@@ -74,19 +75,19 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 				String path = uri.getPath();
 
 				if (!path.equals("/call") && !path.equals("/rawcall")) {
-	               respData(ctx,Unpooled.wrappedBuffer("Not Found".getBytes()),NOT_FOUND,false,"text/plain");
+	               respData(ctx,Unpooled.wrappedBuffer("Not Found".getBytes()),NOT_FOUND,false,"text/plain",null);
 					return;
 				}
 
 				if(!req.method().name().equals("POST")){
-                    respData(ctx,Unpooled.wrappedBuffer("Method Not Allowed".getBytes()),METHOD_NOT_ALLOWED,false,"text/plain");
+                    respData(ctx,Unpooled.wrappedBuffer("Method Not Allowed".getBytes()),METHOD_NOT_ALLOWED,false,"text/plain",null);
                     return;
                 }
 
                 ByteBuf content = req.content();
 
                 if(content.readableBytes() == 0){
-                    respData(ctx,Unpooled.wrappedBuffer("Bad Request".getBytes()),BAD_REQUEST,false,"text/plain");
+                    respData(ctx,Unpooled.wrappedBuffer("Bad Request".getBytes()),BAD_REQUEST,false,"text/plain",null);
                     return;
                 }
 
@@ -97,7 +98,7 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
                 }
 			}
 		} catch (Throwable e) {
-			respData(ctx,Unpooled.wrappedBuffer(e.getMessage().getBytes()),INTERNAL_SERVER_ERROR,false,"text/plain");
+			respData(ctx,Unpooled.wrappedBuffer(e.getMessage().getBytes()),INTERNAL_SERVER_ERROR,false,"text/plain",null);
 			logger.error(e.getMessage(),e);
 		}
 	}
@@ -129,13 +130,13 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
                         respPkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
                         respPkg.getHead().setMsg(future.getException().getMessage());
                         ByteBuf respBuf = respPkg.encode();
-                        respData(ctx, respBuf, OK, keepAlive, "application/octet-stream");
+                        respData(ctx, respBuf, OK, keepAlive, "application/octet-stream",null);
                         logger.error(future.getException().getMessage(),future.getException());
 
                     } else {
                         TransportPackage respPkg = future.getResult();
                         ByteBuf respBuf = respPkg.encode();
-                        respData(ctx,respBuf,OK,keepAlive,"application/octet-stream");
+                        respData(ctx,respBuf,OK,keepAlive,"application/octet-stream",null);
                     }
                 }catch (Exception e){
                     logger.error(e.getMessage(),e);
@@ -151,7 +152,7 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 
             try{
                 ByteBuf respBuf = respPkg.encode();
-                respData(ctx, respBuf, OK, keepAlive, "application/octet-stream");
+                respData(ctx, respBuf, OK, keepAlive, "application/octet-stream",null);
             }catch (Exception e1){
                 logger.error(e.getMessage(),e);
             }
@@ -210,14 +211,21 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
             responseFuture.setCallback(future -> {
                 try {
                     if (future.isException()) {
-
+                        Map<String,String> headers = new HashMap<>();
+                        headers.put("X-Easycall-Ret",String.valueOf(EasyPackage.ERROR_SERVER_INTERNAL));
+                        headers.put("X-Easycall-Msg",future.getException().getMessage());
                         ByteBuf respBuf = Unpooled.wrappedBuffer(future.getException().getMessage().getBytes());
-                        respData(ctx, respBuf,INTERNAL_SERVER_ERROR, keepAlive, "text/plain");
+                        respData(ctx, respBuf,INTERNAL_SERVER_ERROR, keepAlive, "text/plain",headers);
                         logger.error(future.getException().getMessage(),future.getException());
                     } else {
                         TransportPackage respPkg = future.getResult();
                         int ret = respPkg.getHead().getRet() == null ? 0 : respPkg.getHead().getRet();
                         String msg = respPkg.getHead().getMsg() == null ? "ok" : respPkg.getHead().getMsg();
+
+                        Map<String,String> headers = new HashMap<>();
+                        headers.put("X-Easycall-Ret",String.valueOf(ret));
+                        headers.put("X-Easycall-Msg",msg);
+
                         ByteBuf respBuf = respPkg.getBody();
                         HttpResponseStatus status = OK;
                         String contentType = "application/json";
@@ -227,7 +235,7 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
                             respBuf.release();
                             respBuf = Unpooled.wrappedBuffer(msg.getBytes());
                         }
-                        respData(ctx,respBuf,status,keepAlive,contentType);
+                        respData(ctx,respBuf,status,keepAlive,contentType,headers);
                     }
                 }catch (Exception e){
                     logger.error(e.getMessage(),e);
@@ -235,16 +243,28 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
             });
         }catch(Exception e){
             reqPkg.getBody().release();
+            Map<String,String> headers = new HashMap<>();
+            headers.put("X-Easycall-Ret",String.valueOf(EasyPackage.ERROR_SERVER_INTERNAL));
+            headers.put("X-Easycall-Msg",e.getMessage());
             ByteBuf respBuf = Unpooled.wrappedBuffer(e.getMessage().getBytes());
-            respData(ctx, respBuf, INTERNAL_SERVER_ERROR, keepAlive, "text/plain");
+            respData(ctx, respBuf, INTERNAL_SERVER_ERROR, keepAlive, "text/plain",headers);
             logger.error(e.getMessage(),e);
         }
     }
 
-	private void respData(ChannelHandlerContext ctx,ByteBuf respBuf,HttpResponseStatus status,boolean keepAlive,String contentType) {
+	private void respData(ChannelHandlerContext ctx, ByteBuf respBuf, HttpResponseStatus status, boolean keepAlive, String contentType, Map<String,String> headers) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status,respBuf);
         response.headers().set(CONTENT_TYPE, contentType);
         response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+
+        if (headers!= null){
+            Iterator<Entry<String,String>> it = headers.entrySet().iterator();
+            while (it.hasNext()){
+                Entry<String,String> entry = it.next();
+                response.headers().set(entry.getKey(),entry.getValue());
+            }
+        }
+
         if(keepAlive){
             ctx.writeAndFlush(response);
         }else{

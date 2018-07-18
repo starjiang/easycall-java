@@ -191,7 +191,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
             if(method == null)
             {
                 ObjectNode respBody = Utils.json.createObjectNode();
-                request.getHead().setMsg("method not found:"+callMethod);
+                request.getHead().setMsg("method "+callMethod+" not found");
                 request.getHead().setRet(EasyPackage.ERROR_METHOD_NOT_FOUND);
                 response.setHead(request.getHead()).setBody(respBody);
                 log.error("method not found,req={}",request.getHead().toString());
