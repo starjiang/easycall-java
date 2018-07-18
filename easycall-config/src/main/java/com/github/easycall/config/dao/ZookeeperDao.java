@@ -1,6 +1,4 @@
 package com.github.easycall.config.dao;
-
-import com.github.easycall.config.util.Config;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.exception.ZkMarshallingError;
 import org.I0Itec.zkclient.serialize.ZkSerializer;

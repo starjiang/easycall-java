@@ -29,7 +29,7 @@ public class Response
             ctx.writeAndFlush(Unpooled.wrappedBuffer(respPkg.encode()));
 
         }else{
-            throw new EasyException("sync model ctx is null,call flush function not used");
+            throw new EasyException("sync model ctx is null,do not call flush");
         }
     }
 

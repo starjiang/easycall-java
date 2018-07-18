@@ -1,6 +1,5 @@
 package com.github.easycall.util;
-
-import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /*
  * service string 服务名，必须字段
@@ -15,6 +14,8 @@ import java.io.Serializable;
  * sig 用户登录签名，可选字段
  * 头部字段可随意添加
  */
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class EasyHead {
     private String service;
     private String method;
@@ -32,8 +33,7 @@ public class EasyHead {
     }
 
     public EasyHead(){
-        this.ret = 0;
-        this.msg = "ok";
+
     }
 
     public String getService() {

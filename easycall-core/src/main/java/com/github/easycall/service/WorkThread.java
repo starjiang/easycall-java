@@ -43,7 +43,7 @@ class WorkerThread extends Thread
             }
             catch(Exception e)
             {
-                log.error("OrderWorkerThread work process message exception:"+e.getMessage(),e);
+                log.error("work process message exception:"+e.getMessage(),e);
             }
         }
     }

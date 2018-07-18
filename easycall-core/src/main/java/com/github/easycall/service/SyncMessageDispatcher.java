@@ -184,7 +184,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
             String callMethod = request.getHead().getMethod();
 
             if(callMethod == null){
-                throw new EasyException("head method feild not settle");
+                throw new EasyException("head method field not settle");
             }
 
             Method method = methodMap.get(callMethod);

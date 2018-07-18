@@ -1,6 +1,4 @@
 package com.github.easycall.client;
-
-import com.github.easycall.util.EasyPackage;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;

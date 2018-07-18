@@ -1,6 +1,4 @@
 package com.github.easycall.client;
-
-import com.github.easycall.util.EasyPackage;
 import io.netty.channel.ChannelHandlerContext;
 
 public interface ClientMessageDispatcher {

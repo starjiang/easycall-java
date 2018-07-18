@@ -1,4 +1,4 @@
-package com.github.easycall.client;
+package com.github.easycall.util;
 
 @FunctionalInterface
 public interface UncheckedFunction<R> {
