@@ -2,9 +2,10 @@ package com.github.easycall.util;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyException;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.*;
+
+import java.io.InputStream;
+import java.io.OutputStream;
 
 
 public class EasyPackage {
@@ -59,19 +60,22 @@ public class EasyPackage {
 		{
 			CompositeByteBuf compBuf = Unpooled.compositeBuffer();
 
-			ByteBuf stxBuf = Unpooled.buffer(10);
+			ByteBuf stxBuf = Unpooled.directBuffer(10);
+			ByteBuf headBuf = Unpooled.directBuffer();
+			ByteBuf bodyBuf = Unpooled.directBuffer();
 
-			byte[] headBytes = Utils.msgpack.writeValueAsBytes(head);
-			byte[] bodyBytes = Utils.msgpack.writeValueAsBytes(body);
-			ByteBuf headBuf = Unpooled.wrappedBuffer(headBytes);
-			ByteBuf bodyBuf = Unpooled.wrappedBuffer(bodyBytes);
-			ByteBuf etxBuf  = Unpooled.buffer(1);
+			OutputStream headStream = new ByteBufOutputStream(headBuf);
+			OutputStream bodyStream = new ByteBufOutputStream(bodyBuf);
 
+			Utils.msgpack.writeValue(headStream,head);
+			Utils.msgpack.writeValue(bodyStream,body);
+
+			ByteBuf etxBuf  = Unpooled.directBuffer(1);
 
 			stxBuf.writeByte(STX);
 			stxBuf.writeByte(getFormat());
-			stxBuf.writeInt(headBytes.length);
-			stxBuf.writeInt(bodyBytes.length);
+			stxBuf.writeInt(headBuf.readableBytes());
+			stxBuf.writeInt(bodyBuf.readableBytes());
 			etxBuf.writeByte(ETX);
 
 			compBuf.addComponents(true,stxBuf,headBuf,bodyBuf,etxBuf);
@@ -82,18 +86,22 @@ public class EasyPackage {
 		{
 			CompositeByteBuf compBuf = Unpooled.compositeBuffer();
 
-			ByteBuf stxBuf = Unpooled.buffer(10);
+			ByteBuf stxBuf = Unpooled.directBuffer(10);
+			ByteBuf headBuf = Unpooled.directBuffer();
+			ByteBuf bodyBuf = Unpooled.directBuffer();
 
-			byte[] headBytes = Utils.json.writeValueAsBytes(head);
-			byte[] bodyBytes = Utils.json.writeValueAsBytes(body);
-			ByteBuf headBuf = Unpooled.wrappedBuffer(headBytes);
-			ByteBuf bodyBuf = Unpooled.wrappedBuffer(bodyBytes);
-			ByteBuf etxBuf  = Unpooled.buffer(1);
+			OutputStream headStream = new ByteBufOutputStream(headBuf);
+			OutputStream bodyStream = new ByteBufOutputStream(bodyBuf);
+
+			Utils.json.writeValue(headStream,head);
+			Utils.json.writeValue(bodyStream,body);
+
+			ByteBuf etxBuf  = Unpooled.directBuffer(1);
 
 			stxBuf.writeByte(STX);
 			stxBuf.writeByte(getFormat());
-			stxBuf.writeInt(headBytes.length);
-			stxBuf.writeInt(bodyBytes.length);
+			stxBuf.writeInt(headBuf.readableBytes());
+			stxBuf.writeInt(bodyBuf.readableBytes());
 			etxBuf.writeByte(ETX);
 
 			compBuf.addComponents(true,stxBuf,headBuf,bodyBuf,etxBuf);
@@ -115,20 +123,16 @@ public class EasyPackage {
 		int bodyLen = data.getInt(6);
 
 		if (getFormat() == FORMAT_MSGPACK){
-			byte [] headBytes = new byte[headLen];
-			byte [] bodyBytes = new byte[bodyLen];
-			data.getBytes(10,headBytes);
-			data.getBytes(10+headLen,bodyBytes);
-			head = Utils.msgpack.readValue(headBytes,EasyHead.class);
-			body = Utils.msgpack.readValue(bodyBytes,ObjectNode.class);
+			InputStream headStream = new ByteBufInputStream(data.slice(10,headLen));
+			InputStream bodyStream = new ByteBufInputStream(data.slice(10+headLen,bodyLen));
+			head = Utils.msgpack.readValue(headStream,EasyHead.class);
+			body = Utils.msgpack.readValue(bodyStream,ObjectNode.class);
 
 		} else if (getFormat() == FORMAT_JSON){
-			byte [] headBytes = new byte[headLen];
-			byte [] bodyBytes = new byte[bodyLen];
-			data.getBytes(10,headBytes);
-			data.getBytes(10+headLen,bodyBytes);
-			head = Utils.json.readValue(headBytes,EasyHead.class);
-			body = Utils.json.readValue(bodyBytes,ObjectNode.class);
+			InputStream headStream = new ByteBufInputStream(data.slice(10,headLen));
+			InputStream bodyStream = new ByteBufInputStream(data.slice(10+headLen,bodyLen));
+			head = Utils.json.readValue(headStream,EasyHead.class);
+			body = Utils.json.readValue(bodyStream,ObjectNode.class);
 		} else{
 			throw new EasyException("invalid package format");
 		}

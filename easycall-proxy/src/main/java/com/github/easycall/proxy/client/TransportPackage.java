@@ -5,9 +5,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyException;
 import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.Utils;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.*;
+
+import java.io.InputStream;
+import java.io.OutputStream;
 
 
 public class TransportPackage {
@@ -52,16 +53,15 @@ public class TransportPackage {
 		{
 			CompositeByteBuf compBuf = Unpooled.compositeBuffer();
 
-			ByteBuf stxBuf = Unpooled.buffer(10);
-
-			byte[] headBytes = Utils.msgpack.writeValueAsBytes(head);
-			ByteBuf headBuf = Unpooled.wrappedBuffer(headBytes);
-			ByteBuf etxBuf  = Unpooled.buffer(1);
-
+			ByteBuf stxBuf = Unpooled.directBuffer(10);
+            ByteBuf headBuf = Unpooled.directBuffer();
+            OutputStream headStream = new ByteBufOutputStream(headBuf);
+			Utils.msgpack.writeValue(headStream,head);
+			ByteBuf etxBuf  = Unpooled.directBuffer(1);
 
 			stxBuf.writeByte(STX);
 			stxBuf.writeByte(getFormat());
-			stxBuf.writeInt(headBytes.length);
+			stxBuf.writeInt(headBuf.readableBytes());
 			stxBuf.writeInt(body.readableBytes());
 			etxBuf.writeByte(ETX);
 
@@ -71,19 +71,19 @@ public class TransportPackage {
 		}
 		else if(getFormat() == FORMAT_JSON)
 		{
-			CompositeByteBuf compBuf = Unpooled.compositeBuffer();
+            CompositeByteBuf compBuf = Unpooled.compositeBuffer();
 
-			ByteBuf stxBuf = Unpooled.buffer(10);
-
-			byte[] headBytes = Utils.json.writeValueAsBytes(head);
-			ByteBuf headBuf = Unpooled.wrappedBuffer(headBytes);
-			ByteBuf etxBuf  = Unpooled.buffer(1);
+            ByteBuf stxBuf = Unpooled.directBuffer(10);
+            ByteBuf headBuf = Unpooled.directBuffer();
+            OutputStream headStream = new ByteBufOutputStream(headBuf);
+            Utils.json.writeValue(headStream,head);
+            ByteBuf etxBuf  = Unpooled.directBuffer(1);
 
             stxBuf.writeByte(STX);
             stxBuf.writeByte(getFormat());
-            stxBuf.writeInt(headBytes.length);
+            stxBuf.writeInt(headBuf.readableBytes());
             stxBuf.writeInt(body.readableBytes());
-			etxBuf.writeByte(ETX);
+            etxBuf.writeByte(ETX);
 
 			compBuf.addComponents(true,stxBuf,headBuf,body,etxBuf);
 
@@ -104,16 +104,14 @@ public class TransportPackage {
 		int bodyLen = data.getInt(6);
 
 		if (getFormat() == FORMAT_MSGPACK){
-			byte [] headBytes = new byte[headLen];
-			data.getBytes(10,headBytes);
-			head = Utils.msgpack.readValue(headBytes, EasyHead.class);
+            InputStream headStream = new ByteBufInputStream(data.slice(10,headLen));
+            head = Utils.msgpack.readValue(headStream,EasyHead.class);
 			body = data.slice(10+headLen,bodyLen);
 
 
 		} else if (getFormat() == FORMAT_JSON){
-			byte [] headBytes = new byte[headLen];
-			data.getBytes(10,headBytes);
-			head = Utils.json.readValue(headBytes,EasyHead.class);
+            InputStream headStream = new ByteBufInputStream(data.slice(10,headLen));
+			head = Utils.json.readValue(headStream,EasyHead.class);
 			body = data.slice(10+headLen,bodyLen);
 		} else{
 			throw new EasyException("invalid package format");

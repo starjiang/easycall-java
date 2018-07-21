@@ -8,6 +8,11 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+class User{
+    public String name;
+    public Integer uid;
+}
+
 public class TestJackson {
 
     @Test
@@ -20,14 +25,21 @@ public class TestJackson {
 
         ObjectNode node = Utils.json.createObjectNode();
 
+        User user = new User();
+        user.name = "sxxx";
+        user.uid = 100000;
+
+        ObjectNode node2 =  Utils.json.convertValue(user,ObjectNode.class);
+
         node.put("dd",1);
+        node.put("user",node2);
 
         node.putPOJO("name",list);
         String out = Utils.json.writeValueAsString(node);
 
         ObjectNode node1 = Utils.json.readValue(out,ObjectNode.class);
 
-        System.out.println(node1.get("dd"));
+        System.out.println(node1.get("dd")+","+node2.get("name").asText());
 
         System.out.println(Utils.json.writeValueAsString(node));
     }
