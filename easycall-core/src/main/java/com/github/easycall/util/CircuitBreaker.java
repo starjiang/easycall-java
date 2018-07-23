@@ -35,6 +35,7 @@ public class CircuitBreaker {
 
     private final static double FAIL_RATE = 0.5;
     private final static double LIMIT_RATE = 0.2;
+    private final static long COUNT_BASE = 10;
     private final static long FAIL_TIME = 30000;
     private final static long LIMIT_TIME = 30000;
     private final static long RESET_TIME = 60000;
@@ -80,7 +81,7 @@ public class CircuitBreaker {
         //计算熔断阀值，超过阀值，熔断
         double f = (double)info.failCount.get()/(double) info.invokeCount.get();
 
-        if(f > FAIL_RATE){
+        if(f > FAIL_RATE && info.invokeCount.get() > COUNT_BASE-1){
             info.status = CbInfo.CB_OPEN;
             info.lastCircuitBreakerTime = timeNow;
             log.error("CircuitBreaker {} set status open",cbName);
