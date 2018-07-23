@@ -16,7 +16,7 @@ public class AsyncDemoWorker {
     @EasyMethod(method="getProfile")
     public void onGetProfile(Request request, Response response) throws Exception {
 
-        log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
+        //log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
         ObjectNode respBoby = Utils.json.createObjectNode();
         ObjectNode info =  respBoby.putObject("info");

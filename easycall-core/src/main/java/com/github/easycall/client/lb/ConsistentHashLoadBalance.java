@@ -14,10 +14,6 @@ public class ConsistentHashLoadBalance implements LoadBalance{
     private String key;
     private final static int VIRTUAL_NODES = 16;
 
-    public ConsistentHashLoadBalance(String key){
-        this.key = key;
-    }
-
     @Override
     public void setNodeList(List<Node> list) {
         this.list = list;
@@ -34,6 +30,10 @@ public class ConsistentHashLoadBalance implements LoadBalance{
         SortedMap<Integer, Node> subMap = virtualNodes.tailMap(hash);
         Integer i = subMap.firstKey();
         return subMap.get(i);
+    }
+
+    public void setRouteKey(String key){
+        this.key = key;
     }
 
     private void genVirtualNodes(){

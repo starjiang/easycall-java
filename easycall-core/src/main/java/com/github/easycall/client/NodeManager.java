@@ -1,9 +1,12 @@
 package com.github.easycall.client;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.easycall.client.lb.*;
 import com.github.easycall.exception.EasyException;
@@ -19,15 +22,27 @@ public class NodeManager {
 	
 	static Logger logger = LoggerFactory.getLogger(NodeManager.class);
 
-	private ConcurrentHashMap<String,CopyOnWriteArrayList<Node>> serverMap;
+	private ConcurrentHashMap<String,ArrayList<Node>> serverMap;
+	private HashMap<String,ReentrantLock> lockMap;
 	private ZkClient client;
 	private final static int ZK_SESSION_TIMEOUT = 10000;
 	private final static int ZK_CONNECT_TIMEOUT = 2000;
+	private ActiveLoadBalance activeLoadBalance;
+	private ConsistentHashLoadBalance consistentHashLoadBalance;
+	private RandomLoadBalance randomLoadBalance;
+	private RandomWeightLoadBalance randomWeightLoadBalance;
+	private RoundRobinLoadBalance roundRobinLoadBalance;
 	
 	public NodeManager(String zkConnStr)
 	{
 		client = new ZkClient(zkConnStr, ZK_SESSION_TIMEOUT,ZK_CONNECT_TIMEOUT,new ZkStringSerializer());
 		serverMap = new ConcurrentHashMap<>();
+		lockMap = new HashMap<>();
+		activeLoadBalance = new ActiveLoadBalance();
+		consistentHashLoadBalance = new ConsistentHashLoadBalance();
+		randomLoadBalance = new RandomLoadBalance();
+		randomWeightLoadBalance = new RandomWeightLoadBalance();
+		roundRobinLoadBalance = new RoundRobinLoadBalance();
 	}
 		
 	private void getNodesFromZk(String name) throws Exception
@@ -42,7 +57,11 @@ public class NodeManager {
 		{
 			path = "/"+name+"/nodes";
 		}
-		
+
+		if(!client.exists(path)){
+			return;
+		}
+
 		List<String> list = client.getChildren(path);
 		
 		if(list == null)
@@ -50,13 +69,12 @@ public class NodeManager {
 			return;
 		}
 		
-		CopyOnWriteArrayList<Node> nodeList = new CopyOnWriteArrayList<>();
+		ArrayList<Node> nodeList = new ArrayList<>();
 
 		HashSet<String> set = new HashSet<>();
 		for(int i=0;i<list.size();i++)
 		{
 			String data = client.readData(path+"/"+list.get(i));
-			
 			JsonNode value = Utils.json.readTree(data);
 			Node node = new Node(name,value.get("ip").asText(), value.get("port").asInt(), value.get("weight").asInt());
 			set.add(node.ip+":"+node.port);
@@ -64,21 +82,30 @@ public class NodeManager {
 		}
 
 		logger.info(name+" "+set.toString());
-
 		serverMap.put(name, nodeList);
 	}
 	
 	public Node getNode(String name,int loadBalanceType,String routeKey) throws Exception
 	{
-		CopyOnWriteArrayList<Node> list;
-		
-		synchronized (this)
-		{
+		ReentrantLock lock;
+		synchronized (this){
+			lock =  lockMap.get(name);
+			if(lock == null) {
+				lock = new ReentrantLock();
+				lockMap.put(name,lock);
+			}
+		}
+
+		ArrayList<Node> list;
+
+		try{
+
+			lock.lock();
+
 			name = Utils.ZOOKEEPER_SERVICE_PREFIX+"/"+name+"/nodes";
-			
 			list = serverMap.get(name);
-			
-			if(list == null) 
+
+			if(list == null)
 			{
 				getNodesFromZk(name);
 				list = serverMap.get(name);
@@ -87,11 +114,11 @@ public class NodeManager {
 				{
 					return null;
 				}
-				else 
+				else
 				{
 					client.subscribeChildChanges(name, new IZkChildListener() {
-						
-						public void handleChildChange(String parentPath,List<String> currentChildren) throws Exception 
+
+						public void handleChildChange(String parentPath,List<String> currentChildren) throws Exception
 						{
 							logger.info(parentPath+" changes reload");
 							getNodesFromZk(parentPath);
@@ -99,28 +126,27 @@ public class NodeManager {
 					});
 				}
 			}
+		}finally {
+			lock.unlock();
 		}
 
+
 		if(loadBalanceType == LoadBalance.LB_ACTIVE){
-            LoadBalance lb = new ActiveLoadBalance();
-            lb.setNodeList(list);
-            return lb.getNode();
+            activeLoadBalance.setNodeList(list);
+            return activeLoadBalance.getNode();
         } else if(loadBalanceType == LoadBalance.LB_CONSISTENT_HASH){
-            LoadBalance lb = new ConsistentHashLoadBalance(routeKey);
-            lb.setNodeList(list);
-            return lb.getNode();
+            consistentHashLoadBalance.setRouteKey(routeKey);
+            consistentHashLoadBalance.setNodeList(list);
+            return consistentHashLoadBalance.getNode();
         }else if(loadBalanceType == LoadBalance.LB_RANDOM){
-            LoadBalance lb = new RandomLoadBalance();
-            lb.setNodeList(list);
-            return lb.getNode();
+            randomLoadBalance.setNodeList(list);
+            return randomLoadBalance.getNode();
         }else if(loadBalanceType == LoadBalance.LB_RANDOM_WEIGHT){
-            LoadBalance lb = new RandomWeightLoadBalance();
-            lb.setNodeList(list);
-            return lb.getNode();
+            randomWeightLoadBalance.setNodeList(list);
+            return randomWeightLoadBalance.getNode();
         }else if(loadBalanceType == LoadBalance.LB_ROUND_ROBIN){
-            LoadBalance lb = new RoundRobinLoadBalance();
-            lb.setNodeList(list);
-            return lb.getNode();
+            roundRobinLoadBalance.setNodeList(list);
+            return roundRobinLoadBalance.getNode();
         }else {
 		    throw new EasyException("invalid loadbalance type");
         }

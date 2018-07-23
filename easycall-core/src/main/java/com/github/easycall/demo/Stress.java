@@ -26,7 +26,7 @@ class Task implements Runnable
 		{
 			ObjectNode reqBody = Utils.json.createObjectNode();
 			
-			client.syncRequest("profile","getProfile", reqBody,2000);
+			client.syncRequest("profileAsync","getProfile", reqBody,2000);
 			int count = currCount.getAndAdd(1);
 			if(count % 10000 == 0)
 			{
