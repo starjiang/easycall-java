@@ -428,6 +428,10 @@ public final class TransportClient implements ClientMessageDispatcher {
             throw new EasyException("service "+name+" session size > "+MAX_SESSION_SIZE);
         }
 
+        session.node.active.incrementAndGet();
+        session.timeout = timer.newTimeout(new SessionTimeoutTask(this,name, session.sessionId), timeout, TimeUnit.MILLISECONDS);
+        sessions.put(session.sessionId, session);
+
         ChannelHandlerContext ctx = status.getConnection();
 
         if (ctx == null) {
@@ -449,10 +453,6 @@ public final class TransportClient implements ClientMessageDispatcher {
             ByteBuf buf = pkg.encode();
             ctx.writeAndFlush(buf);
         }
-
-        session.node.active.incrementAndGet();
-        session.timeout = timer.newTimeout(new SessionTimeoutTask(this,name, session.sessionId), timeout, TimeUnit.MILLISECONDS);
-        sessions.put(session.sessionId, session);
 
         return future;
     }

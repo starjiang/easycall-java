@@ -102,7 +102,7 @@ public class CircuitBreaker {
             info.lastResetTime = timeNow;
             info.failCount.set(0);
             info.invokeCount.set(1);
-            log.error("CircuitBreaker {} reset",cbName);
+            log.info("CircuitBreaker {} reset",cbName);
         }
 
         info.invokeCount.incrementAndGet();

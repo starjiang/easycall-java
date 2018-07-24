@@ -21,6 +21,9 @@ public class ResponseFuture {
 
     public synchronized void setCallback(ResponseCallbackHandler handler){
         this.handler = handler;
+        if(done){
+            handler.onResult(this);
+        }
     }
 
     public synchronized boolean isDone(){

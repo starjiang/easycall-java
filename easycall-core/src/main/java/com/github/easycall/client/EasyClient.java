@@ -284,12 +284,15 @@ public final class EasyClient implements ClientMessageDispatcher {
             pkg.getHead().setSeq(session.seq);
         }
 
-        session.timeout.cancel();
+        if(session.timeout != null){
+            session.timeout.cancel();
+        }
 
         if(session.future != null)
         {
             session.future.setResult(pkg);
         }
+
         session.node.active.decrementAndGet();
         sessions.remove(session.sessionId);
 
@@ -451,6 +454,10 @@ public final class EasyClient implements ClientMessageDispatcher {
             throw new EasyException("service "+name+" session size > "+MAX_SESSION_SIZE);
         }
 
+        sessions.put(session.sessionId, session);
+        session.timeout = timer.newTimeout(new SessionTimeoutTask(this,name, session.sessionId), timeout, TimeUnit.MILLISECONDS);
+        session.node.active.incrementAndGet();
+
         ChannelHandlerContext ctx = status.getConnection();
 
         if (ctx == null) {
@@ -474,11 +481,6 @@ public final class EasyClient implements ClientMessageDispatcher {
             ByteBuf buf = pkg.setFormat((byte)format).setHead(head).setBody(body).encode();
             ctx.writeAndFlush(buf);
         }
-
-        session.node.active.incrementAndGet();
-        session.timeout = timer.newTimeout(new SessionTimeoutTask(this,name, session.sessionId), timeout, TimeUnit.MILLISECONDS);
-        sessions.put(session.sessionId, session);
-
         return future;
     }
 
