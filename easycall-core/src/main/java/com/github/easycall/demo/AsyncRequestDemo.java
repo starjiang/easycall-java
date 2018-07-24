@@ -52,6 +52,8 @@ public class AsyncRequestDemo {
         {
             e.printStackTrace();
         }
+
+        System.in.read();
     }
 
 }
