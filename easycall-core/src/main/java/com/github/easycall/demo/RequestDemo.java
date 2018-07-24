@@ -7,12 +7,15 @@ import com.github.easycall.util.Utils;
 
 
 public class RequestDemo {
-
-	static final String SERVICE_DEMO = "profile";
 	
 	public static void main(String[] args) throws Exception
 	{
-    	String zkConnStr = "172.28.2.162:2181";
+		if(args.length < 1){
+			System.out.println("usage:request zk");
+			return;
+		}
+
+    	String zkConnStr = args[0];
 
 		try
 		{

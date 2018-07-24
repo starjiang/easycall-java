@@ -9,42 +9,43 @@ import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
 
 public class AsyncRequestDemo {
-    static final String SERVICE_DEMO = "profile";
 
     public static void main(String[] args) throws Exception
     {
-        String zkConnStr = "172.28.2.162:2181";
+        System.out.println(args.length);
+        if(args.length < 2){
+            System.out.println("usage:request zk request_count");
+            return;
+        }
+
+        String zkConnStr = args[0];
+        int requestCount = Integer.valueOf(args[1]);
 
         try
         {
             EasyClient client = new EasyClient(zkConnStr,2, LoadBalance.LB_ACTIVE);
 
-            while(true){
-                for(int i=0;i<10;i++){
-                    EasyHead reqHead = EasyHead.newInstance().setService("profile").setMethod("getProfile");
-                    ObjectNode reqBody = Utils.json.createObjectNode().put("uid",100000);
+            for(int i=0;i<requestCount;i++){
+                EasyHead reqHead = EasyHead.newInstance().setService("profile").setMethod("getProfile");
+                ObjectNode reqBody = Utils.json.createObjectNode().put("uid",100000);
 
-                    try{
-                        ResponseFuture future = client.asyncRequest(EasyPackage.FORMAT_MSGPACK,reqHead, reqBody, 1000);
+                try{
+                    ResponseFuture future = client.asyncRequest(EasyPackage.FORMAT_MSGPACK,reqHead, reqBody, 1000);
 
-                        future.setCallback((responseFuture) ->{
+                    future.setCallback((responseFuture) ->{
 
-                            if(responseFuture.isException()){
-                                responseFuture.getException().printStackTrace();
-                            }else{
-                                System.out.println(responseFuture.getResult().getBody().toString());
-                            }
+                        if(responseFuture.isException()){
+                            responseFuture.getException().printStackTrace();
+                        }else{
+                            System.out.println(responseFuture.getResult().getBody().toString());
+                        }
 
-                        });
+                    });
 
-                    }catch (Exception e){
-                        e.printStackTrace();
-                    }
+                }catch (Exception e){
+                    e.printStackTrace();
                 }
-
-                Thread.sleep(2000);
             }
-
 
         }
         catch (Throwable e)

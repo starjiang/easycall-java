@@ -9,12 +9,15 @@ import com.github.easycall.util.Utils;
 
 public class RequestDirectDemo {
 
-    static final String SERVICE_DEMO = "profile";
-
     public static void main(String[] args) throws Exception
     {
-        String zkConnStr = "172.28.2.162:2181";
 
+        if(args.length < 1){
+            System.out.println("usage:request zk");
+            return;
+        }
+
+        String zkConnStr = args[0];
         try
         {
             EasyClient client = new EasyClient(zkConnStr,4, LoadBalance.LB_ROUND_ROBIN);

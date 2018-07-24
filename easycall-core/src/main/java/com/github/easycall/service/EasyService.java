@@ -27,7 +27,7 @@ public class EasyService {
 	private final static int DEFAULT_EVENT_THREAD_NUM = 8;
     private final static int DEFAULT_WORKER_THREAD_NUM = 100;
     private final static int DEFAULT_WORKER_QUEUE_SIZE = 2000;
-	private final static int DEFAULT_ACCEPT_BACKLOG = 1024;
+	private final static int DEFAULT_ACCEPT_BACKLOG = 2048;
 	private final static int DEFAULT_WEIGHT = 100;
 	public final static int WORKER_TYPE_HASH = 1;
 	public final static int WORKER_TYPE_RANDOM = 2;

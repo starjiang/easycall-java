@@ -169,6 +169,7 @@ public final class TransportClient implements ClientMessageDispatcher {
     private static int DEFAULT_TICK_DURATION = 100;
     private static int DEFAULT_CONNECTION_NUM = 8;
     private static int MAX_SESSION_SIZE = 10000;
+    private static int DEFAULT_CONNECT_TIMEOUT = 3000;
 
     private Bootstrap boot;
     private EventLoopGroup group;
@@ -203,6 +204,7 @@ public final class TransportClient implements ClientMessageDispatcher {
         boot.group(group);
         boot.channel(NioSocketChannel.class);
         boot.option(ChannelOption.TCP_NODELAY, true);
+        boot.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,DEFAULT_CONNECT_TIMEOUT);
         boot.option(ChannelOption.SO_KEEPALIVE, true);
         boot.option(ChannelOption.SO_REUSEADDR, true);
         boot.handler(new ChannelInitializer<SocketChannel>() {
@@ -440,7 +442,11 @@ public final class TransportClient implements ClientMessageDispatcher {
             if (status.getConnectStatus() == ConnStatus.INIT) {
 
                 status.setConnectStatus(ConnStatus.CONNECTING);
-                boot.connect(node.ip, node.port);
+                boot.connect(node.ip, node.port).addListener(connectFuture->{
+                    if(!connectFuture.isSuccess()){
+                        log.error(connectFuture.cause().getMessage(),connectFuture.cause());
+                    }
+                });
             }
 
         } else {
@@ -448,7 +454,11 @@ public final class TransportClient implements ClientMessageDispatcher {
             int connectCount = status.getConnectionSize();
             if (connectCount < DEFAULT_CONNECTION_NUM && status.getConnectStatus() != ConnStatus.CONNECTING) {
                 status.setConnectStatus(ConnStatus.CONNECTING);
-                boot.connect(node.ip, node.port);
+                boot.connect(node.ip, node.port).addListener(connectFuture->{
+                    if(!connectFuture.isSuccess()){
+                        log.error(connectFuture.cause().getMessage(),connectFuture.cause());
+                    }
+                });
             }
             ByteBuf buf = pkg.encode();
             ctx.writeAndFlush(buf);

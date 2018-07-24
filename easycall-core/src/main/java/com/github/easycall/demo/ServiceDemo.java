@@ -8,8 +8,7 @@ import com.github.easycall.util.EasyConfig;
 public final class ServiceDemo {
 
     public static void main(String[] args) throws Exception {
-    	
-  	
+
     	String zkConnStr = EasyConfig.instance.getString("service.zk","127.0.0.1:2181");
 
 		EasyService service = new EasyService(zkConnStr);

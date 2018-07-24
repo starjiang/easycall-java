@@ -27,7 +27,7 @@ import io.netty.handler.logging.LoggingHandler;
 public class ProxyServer {
 	
 	
-	final static private int ACCEPT_BACKLOG = 1024;
+	final static private int ACCEPT_BACKLOG = 2048;
     private ProxyConfig config;
 	private TransportClient client;
 	static Logger log = LoggerFactory.getLogger(ProxyServer.class);

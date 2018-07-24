@@ -13,15 +13,11 @@ import com.github.easycall.exception.EasyServiceNotFoundException;
 import com.github.easycall.exception.EasyTimeoutException;
 import com.github.easycall.util.*;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -166,6 +162,7 @@ public final class EasyClient implements ClientMessageDispatcher {
     private static int DEFAULT_TICK_DURATION = 100;
     private static int DEFAULT_CONNECTION_NUM = 8;
     private static int MAX_SESSION_SIZE = 10000;
+    private static int DEFAULT_CONNECT_TIMEOUT = 3000;
 
     private Bootstrap boot;
     private EventLoopGroup group;
@@ -201,6 +198,7 @@ public final class EasyClient implements ClientMessageDispatcher {
         boot.channel(NioSocketChannel.class);
         boot.option(ChannelOption.TCP_NODELAY, true);
         boot.option(ChannelOption.SO_KEEPALIVE, true);
+        boot.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,DEFAULT_CONNECT_TIMEOUT);
         boot.option(ChannelOption.SO_REUSEADDR, true);
         boot.handler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -466,7 +464,11 @@ public final class EasyClient implements ClientMessageDispatcher {
             if (status.getConnectStatus() == ConnStatus.INIT) {
 
                 status.setConnectStatus(ConnStatus.CONNECTING);
-                boot.connect(node.ip, node.port);
+                boot.connect(node.ip, node.port).addListener(connectFuture->{
+                    if(!connectFuture.isSuccess()){
+                        log.error(connectFuture.cause().getMessage(),connectFuture.cause());
+                    }
+                });
             }
 
         } else {
@@ -474,7 +476,11 @@ public final class EasyClient implements ClientMessageDispatcher {
             int connectCount = status.getConnectionSize();
             if (connectCount < DEFAULT_CONNECTION_NUM && status.getConnectStatus() != ConnStatus.CONNECTING) {
                 status.setConnectStatus(ConnStatus.CONNECTING);
-                boot.connect(node.ip, node.port);
+                boot.connect(node.ip, node.port).addListener(connectFuture->{
+                    if(!connectFuture.isSuccess()){
+                        log.error(connectFuture.cause().getMessage(),connectFuture.cause());
+                    }
+                });
             }
 
             EasyPackage pkg = EasyPackage.newInstance();
