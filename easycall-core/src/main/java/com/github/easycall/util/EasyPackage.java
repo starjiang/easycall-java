@@ -58,11 +58,11 @@ public class EasyPackage {
 
 		if(getFormat() == FORMAT_MSGPACK)
 		{
-			CompositeByteBuf compBuf = Unpooled.compositeBuffer();
+			CompositeByteBuf compBuf = PooledByteBufAllocator.DEFAULT.compositeBuffer();
 
-			ByteBuf stxBuf = Unpooled.directBuffer(10);
-			ByteBuf headBuf = Unpooled.directBuffer();
-			ByteBuf bodyBuf = Unpooled.directBuffer();
+			ByteBuf stxBuf = PooledByteBufAllocator.DEFAULT.directBuffer(10);
+			ByteBuf headBuf = PooledByteBufAllocator.DEFAULT.directBuffer();
+			ByteBuf bodyBuf = PooledByteBufAllocator.DEFAULT.directBuffer();
 
 			OutputStream headStream = new ByteBufOutputStream(headBuf);
 			OutputStream bodyStream = new ByteBufOutputStream(bodyBuf);
@@ -70,7 +70,7 @@ public class EasyPackage {
 			Utils.msgpack.writeValue(headStream,head);
 			Utils.msgpack.writeValue(bodyStream,body);
 
-			ByteBuf etxBuf  = Unpooled.directBuffer(1);
+			ByteBuf etxBuf  = PooledByteBufAllocator.DEFAULT.directBuffer(1);
 
 			stxBuf.writeByte(STX);
 			stxBuf.writeByte(getFormat());
@@ -84,11 +84,11 @@ public class EasyPackage {
 		}
 		else if(getFormat() == FORMAT_JSON)
 		{
-			CompositeByteBuf compBuf = Unpooled.compositeBuffer();
+			CompositeByteBuf compBuf = PooledByteBufAllocator.DEFAULT.compositeBuffer();
 
-			ByteBuf stxBuf = Unpooled.directBuffer(10);
-			ByteBuf headBuf = Unpooled.directBuffer();
-			ByteBuf bodyBuf = Unpooled.directBuffer();
+			ByteBuf stxBuf = PooledByteBufAllocator.DEFAULT.directBuffer(10);
+			ByteBuf headBuf = PooledByteBufAllocator.DEFAULT.directBuffer();
+			ByteBuf bodyBuf = PooledByteBufAllocator.DEFAULT.directBuffer();
 
 			OutputStream headStream = new ByteBufOutputStream(headBuf);
 			OutputStream bodyStream = new ByteBufOutputStream(bodyBuf);
@@ -96,7 +96,7 @@ public class EasyPackage {
 			Utils.json.writeValue(headStream,head);
 			Utils.json.writeValue(bodyStream,body);
 
-			ByteBuf etxBuf  = Unpooled.directBuffer(1);
+			ByteBuf etxBuf  = PooledByteBufAllocator.DEFAULT.directBuffer(1);
 
 			stxBuf.writeByte(STX);
 			stxBuf.writeByte(getFormat());

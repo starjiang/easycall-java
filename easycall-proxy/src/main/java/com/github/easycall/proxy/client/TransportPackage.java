@@ -51,13 +51,13 @@ public class TransportPackage {
 	{
 		if(getFormat() == FORMAT_MSGPACK)
 		{
-			CompositeByteBuf compBuf = Unpooled.compositeBuffer();
+			CompositeByteBuf compBuf = PooledByteBufAllocator.DEFAULT.compositeBuffer();
 
-			ByteBuf stxBuf = Unpooled.directBuffer(10);
-            ByteBuf headBuf = Unpooled.directBuffer();
+			ByteBuf stxBuf = PooledByteBufAllocator.DEFAULT.directBuffer(10);
+            ByteBuf headBuf = PooledByteBufAllocator.DEFAULT.directBuffer();
             OutputStream headStream = new ByteBufOutputStream(headBuf);
 			Utils.msgpack.writeValue(headStream,head);
-			ByteBuf etxBuf  = Unpooled.directBuffer(1);
+			ByteBuf etxBuf  = PooledByteBufAllocator.DEFAULT.directBuffer(1);
 
 			stxBuf.writeByte(STX);
 			stxBuf.writeByte(getFormat());
@@ -71,13 +71,13 @@ public class TransportPackage {
 		}
 		else if(getFormat() == FORMAT_JSON)
 		{
-            CompositeByteBuf compBuf = Unpooled.compositeBuffer();
+            CompositeByteBuf compBuf = PooledByteBufAllocator.DEFAULT.compositeBuffer();
 
-            ByteBuf stxBuf = Unpooled.directBuffer(10);
-            ByteBuf headBuf = Unpooled.directBuffer();
+            ByteBuf stxBuf = PooledByteBufAllocator.DEFAULT.directBuffer(10);
+            ByteBuf headBuf = PooledByteBufAllocator.DEFAULT.directBuffer();
             OutputStream headStream = new ByteBufOutputStream(headBuf);
             Utils.json.writeValue(headStream,head);
-            ByteBuf etxBuf  = Unpooled.directBuffer(1);
+            ByteBuf etxBuf  = PooledByteBufAllocator.DEFAULT.directBuffer(1);
 
             stxBuf.writeByte(STX);
             stxBuf.writeByte(getFormat());

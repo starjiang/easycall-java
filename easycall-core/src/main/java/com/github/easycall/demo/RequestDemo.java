@@ -22,7 +22,7 @@ public class RequestDemo {
 			EasyClient client = new EasyClient(zkConnStr,4, LoadBalance.LB_ROUND_ROBIN);
 
 			ObjectNode reqBody = Utils.json.createObjectNode().put("uid",100000).put("seq",0);
-			EasyPackage pkg = client.syncRequest("profile","getProfile",reqBody, 1000);
+			EasyPackage pkg = client.syncRequest("profile","GetProfile",reqBody, 1000);
 			System.out.println(pkg.getBody().toString());
 
 		}
