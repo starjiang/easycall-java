@@ -137,6 +137,10 @@ public class EasyPackage {
 			throw new EasyException("invalid package format");
 		}
 
+		if(head == null || body == null){
+			throw new EasyException("head or body is null");
+		}
+
 		return this;
 	}
 	

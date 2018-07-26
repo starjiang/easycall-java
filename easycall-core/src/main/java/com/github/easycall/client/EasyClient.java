@@ -240,7 +240,7 @@ public final class EasyClient implements ClientMessageDispatcher {
         session.node.active.decrementAndGet();
         sessions.remove(sessionId);
 
-        if(waitSessionQueue != null && waitSessionQueue.size() > 0){
+        if(waitSessionQueue != null && !waitSessionQueue.isEmpty()){
             waitSessionQueue.remove(session);
         }
 
