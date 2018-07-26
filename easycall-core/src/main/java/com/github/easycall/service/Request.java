@@ -3,6 +3,7 @@ package com.github.easycall.service;
 import java.net.SocketAddress;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.util.EasyHead;
+import com.github.easycall.util.Utils;
 
 
 public class Request
@@ -35,6 +36,10 @@ public class Request
 	public ObjectNode getBody()
 	{
 		return body;
+	}
+
+	public <T> T getBody(Class<T> valueType){
+		return Utils.json.convertValue(body,valueType);
 	}
 	
 	public SocketAddress getRemoteAddress()

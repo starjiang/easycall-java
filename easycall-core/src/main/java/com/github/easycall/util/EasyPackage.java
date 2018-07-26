@@ -154,7 +154,11 @@ public class EasyPackage {
 	{
 		return body;
 	}
-	
+
+	public <T> T getBody(Class<T> valueType){
+		return Utils.json.convertValue(body,valueType);
+	}
+
 	public EasyPackage setBody(ObjectNode body)
 	{
 		this.body = body;
