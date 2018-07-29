@@ -19,9 +19,12 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.proxy.client.ResponseFuture;
 import com.github.easycall.proxy.client.TransportClient;
 import com.github.easycall.proxy.client.TransportPackage;
+import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.netty.channel.ChannelHandlerContext;
@@ -47,10 +50,9 @@ public class MessageHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception
     {
 		ByteBuf buf = (ByteBuf)msg;
-		TransportPackage pkg = TransportPackage.newInstance().decode(buf);
-
-    	try
-    	{
+		try
+		{
+			TransportPackage pkg = TransportPackage.newInstance().decode(buf);
 			ResponseFuture responseFuture = client.asyncRequest(pkg, timeout);
 
 			responseFuture.setCallback(future -> {
@@ -64,6 +66,7 @@ public class MessageHandler extends ChannelInboundHandlerAdapter {
 						pkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
 						respPkg.setHead(pkg.getHead()).setBody(respBody);
 						ctx.writeAndFlush(respPkg.encode());
+						ReferenceCountUtil.release(buf);
 						logger.error("req={}",pkg.getHead().toString(),future.getException());
 
 					}else{
@@ -77,14 +80,8 @@ public class MessageHandler extends ChannelInboundHandlerAdapter {
     	}
     	catch(Throwable e)
     	{
-			EasyPackage respPkg = EasyPackage.newInstance();
-			ObjectNode respBody = Utils.json.createObjectNode();
-			pkg.getHead().setMsg(e.getMessage());
-			pkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
-			respPkg.setHead(pkg.getHead()).setBody(respBody);
-			ctx.writeAndFlush(respPkg.encode());
-			buf.release();
-	    	logger.error("Exception:"+e.getMessage(),e);
+			ReferenceCountUtil.release(buf);
+			throw  e;
     	}
     }
 

@@ -23,12 +23,14 @@ public class NodeManager {
 	static Logger logger = LoggerFactory.getLogger(NodeManager.class);
 
 	private ConcurrentHashMap<String,ArrayList<Node>> serverMap;
+	private HashMap<String,Long> exsitMap;
 	private HashMap<String,ReentrantLock> lockMap;
 	private ZkClient client;
 	private final static int ZK_SESSION_TIMEOUT = 10000;
 	private final static int ZK_CONNECT_TIMEOUT = 2000;
+	private final static int ZK_NOT_EXSIT_CACHE_TIME = 5000;
 	private ActiveLoadBalance activeLoadBalance;
-	private ConsistentHashLoadBalance consistentHashLoadBalance;
+	private HashLoadBalance hashLoadBalance;
 	private RandomLoadBalance randomLoadBalance;
 	private RandomWeightLoadBalance randomWeightLoadBalance;
 	private RoundRobinLoadBalance roundRobinLoadBalance;
@@ -37,9 +39,10 @@ public class NodeManager {
 	{
 		client = new ZkClient(zkConnStr, ZK_SESSION_TIMEOUT,ZK_CONNECT_TIMEOUT,new ZkStringSerializer());
 		serverMap = new ConcurrentHashMap<>();
+		exsitMap = new HashMap<>();
 		lockMap = new HashMap<>();
 		activeLoadBalance = new ActiveLoadBalance();
-		consistentHashLoadBalance = new ConsistentHashLoadBalance();
+		hashLoadBalance = new HashLoadBalance();
 		randomLoadBalance = new RandomLoadBalance();
 		randomWeightLoadBalance = new RandomWeightLoadBalance();
 		roundRobinLoadBalance = new RoundRobinLoadBalance();
@@ -107,13 +110,20 @@ public class NodeManager {
 
 			if(list == null)
 			{
+				Long currentTime = System.currentTimeMillis();
+
+				if(exsitMap.getOrDefault(name,0L)+ZK_NOT_EXSIT_CACHE_TIME > currentTime){
+					return null;
+				}
+
 				getNodesFromZk(name);
 				list = serverMap.get(name);
 
 				if(list == null)
 				{
+					exsitMap.put(name,currentTime);
 					return null;
-				}
+			 	}
 				else
 				{
 					client.subscribeChildChanges(name, new IZkChildListener() {
@@ -134,10 +144,10 @@ public class NodeManager {
 		if(loadBalanceType == LoadBalance.LB_ACTIVE){
             activeLoadBalance.setNodeList(list);
             return activeLoadBalance.getNode();
-        } else if(loadBalanceType == LoadBalance.LB_CONSISTENT_HASH){
-            consistentHashLoadBalance.setRouteKey(routeKey);
-            consistentHashLoadBalance.setNodeList(list);
-            return consistentHashLoadBalance.getNode();
+        } else if(loadBalanceType == LoadBalance.LB_HASH){
+            hashLoadBalance.setRouteKey(routeKey);
+            hashLoadBalance.setNodeList(list);
+            return hashLoadBalance.getNode();
         }else if(loadBalanceType == LoadBalance.LB_RANDOM){
             randomLoadBalance.setNodeList(list);
             return randomLoadBalance.getNode();

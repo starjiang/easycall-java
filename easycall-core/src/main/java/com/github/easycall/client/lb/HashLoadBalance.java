@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-public class ConsistentHashLoadBalance implements LoadBalance{
+public class HashLoadBalance implements LoadBalance{
 
     private List<Node> list;
     private static SortedMap<Integer, Node> virtualNodes = new TreeMap<>();

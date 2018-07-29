@@ -119,45 +119,29 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 
     private void requestRawAndResponse(ChannelHandlerContext ctx,TransportPackage reqPkg,final boolean keepAlive){
 
-	    try{
-	        ResponseFuture responseFuture = client.asyncRequest(reqPkg, timeout);
-            responseFuture.setCallback(future -> {
-                try {
-                    if (future.isException()) {
+        ResponseFuture responseFuture = client.asyncRequest(reqPkg, timeout);
+        responseFuture.setCallback(future -> {
+            try {
+                if (future.isException()) {
 
-                        EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat())
-                                .setHead(reqPkg.getHead()).setBody(Utils.json.createObjectNode());
-                        respPkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
-                        respPkg.getHead().setMsg(future.getException().getMessage());
-                        ByteBuf respBuf = respPkg.encode();
-                        respData(ctx, respBuf, OK, keepAlive, "application/octet-stream",null);
-                        logger.error(future.getException().getMessage(),future.getException());
+                    EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat())
+                            .setHead(reqPkg.getHead()).setBody(Utils.json.createObjectNode());
+                    respPkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
+                    respPkg.getHead().setMsg(future.getException().getMessage());
+                    ByteBuf respBuf = respPkg.encode();
+                    respData(ctx, respBuf, OK, keepAlive, "application/octet-stream",null);
+                    logger.error(future.getException().getMessage(),future.getException());
 
-                    } else {
-                        TransportPackage respPkg = future.getResult();
-                        ByteBuf respBuf = respPkg.encode();
-                        respData(ctx,respBuf,OK,keepAlive,"application/octet-stream",null);
-                    }
-                }catch (Exception e){
-                    logger.error(e.getMessage(),e);
+                } else {
+                    TransportPackage respPkg = future.getResult();
+                    ByteBuf respBuf = respPkg.encode();
+                    respData(ctx,respBuf,OK,keepAlive,"application/octet-stream",null);
                 }
-            });
-	    }catch(Exception e){
-
-	        reqPkg.getBody().release();
-            EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat())
-                    .setHead(reqPkg.getHead()).setBody(Utils.json.createObjectNode());
-            respPkg.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
-            respPkg.getHead().setMsg(e.getMessage());
-
-            try{
-                ByteBuf respBuf = respPkg.encode();
-                respData(ctx, respBuf, OK, keepAlive, "application/octet-stream",null);
-            }catch (Exception e1){
+            }catch (Exception e){
                 logger.error(e.getMessage(),e);
             }
-            logger.error(e.getMessage(),e);
-        }
+        });
+
     }
 
 	private void processJsonRequest(ChannelHandlerContext ctx,FullHttpRequest req) throws  Exception{
@@ -206,50 +190,41 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 
     private void requestJsonAndResponse(ChannelHandlerContext ctx,TransportPackage reqPkg,final boolean keepAlive){
 
-        try{
-            ResponseFuture responseFuture = client.asyncRequest(reqPkg, timeout);
-            responseFuture.setCallback(future -> {
-                try {
-                    if (future.isException()) {
-                        Map<String,String> headers = new HashMap<>();
-                        headers.put("X-Easycall-Ret",String.valueOf(EasyPackage.ERROR_SERVER_INTERNAL));
-                        headers.put("X-Easycall-Msg",future.getException().getMessage());
-                        ByteBuf respBuf = Unpooled.wrappedBuffer(future.getException().getMessage().getBytes());
-                        respData(ctx, respBuf,INTERNAL_SERVER_ERROR, keepAlive, "text/plain",headers);
-                        logger.error(future.getException().getMessage(),future.getException());
-                    } else {
-                        TransportPackage respPkg = future.getResult();
-                        int ret = respPkg.getHead().getRet() == null ? 0 : respPkg.getHead().getRet();
-                        String msg = respPkg.getHead().getMsg() == null ? "ok" : respPkg.getHead().getMsg();
+        ResponseFuture responseFuture = client.asyncRequest(reqPkg, timeout);
+        responseFuture.setCallback(future -> {
+            try {
+                if (future.isException()) {
+                    Map<String,String> headers = new HashMap<>();
+                    headers.put("X-Easycall-Ret",String.valueOf(EasyPackage.ERROR_SERVER_INTERNAL));
+                    headers.put("X-Easycall-Msg",future.getException().getMessage());
+                    ByteBuf respBuf = Unpooled.wrappedBuffer(future.getException().getMessage().getBytes());
+                    respData(ctx, respBuf,INTERNAL_SERVER_ERROR, keepAlive, "text/plain",headers);
+                    logger.error(future.getException().getMessage(),future.getException());
+                } else {
+                    TransportPackage respPkg = future.getResult();
+                    int ret = respPkg.getHead().getRet() == null ? 0 : respPkg.getHead().getRet();
+                    String msg = respPkg.getHead().getMsg() == null ? "ok" : respPkg.getHead().getMsg();
 
-                        Map<String,String> headers = new HashMap<>();
-                        headers.put("X-Easycall-Ret",String.valueOf(ret));
-                        headers.put("X-Easycall-Msg",msg);
+                    Map<String,String> headers = new HashMap<>();
+                    headers.put("X-Easycall-Ret",String.valueOf(ret));
+                    headers.put("X-Easycall-Msg",msg);
 
-                        ByteBuf respBuf = respPkg.getBody();
-                        HttpResponseStatus status = OK;
-                        String contentType = "application/json";
-                        if(ret != 0){
-                            contentType = "text/plain";
-                            status = INTERNAL_SERVER_ERROR;
-                            respBuf.release();
-                            respBuf = Unpooled.wrappedBuffer(msg.getBytes());
-                        }
-                        respData(ctx,respBuf,status,keepAlive,contentType,headers);
+                    ByteBuf respBuf = respPkg.getBody();
+                    HttpResponseStatus status = OK;
+                    String contentType = "application/json";
+                    if(ret != 0){
+                        contentType = "text/plain";
+                        status = INTERNAL_SERVER_ERROR;
+                        respBuf.release();
+                        respBuf = Unpooled.wrappedBuffer(msg.getBytes());
                     }
-                }catch (Exception e){
-                    logger.error(e.getMessage(),e);
+                    respData(ctx,respBuf,status,keepAlive,contentType,headers);
                 }
-            });
-        }catch(Exception e){
-            reqPkg.getBody().release();
-            Map<String,String> headers = new HashMap<>();
-            headers.put("X-Easycall-Ret",String.valueOf(EasyPackage.ERROR_SERVER_INTERNAL));
-            headers.put("X-Easycall-Msg",e.getMessage());
-            ByteBuf respBuf = Unpooled.wrappedBuffer(e.getMessage().getBytes());
-            respData(ctx, respBuf, INTERNAL_SERVER_ERROR, keepAlive, "text/plain",headers);
-            logger.error(e.getMessage(),e);
-        }
+            }catch (Exception e){
+                logger.error(e.getMessage(),e);
+            }
+        });
+
     }
 
 	private void respData(ChannelHandlerContext ctx, ByteBuf respBuf, HttpResponseStatus status, boolean keepAlive, String contentType, Map<String,String> headers) {
@@ -274,7 +249,7 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		cause.printStackTrace();
+        logger.error(cause.getMessage(),cause);
 		ctx.close();
 	}
 }

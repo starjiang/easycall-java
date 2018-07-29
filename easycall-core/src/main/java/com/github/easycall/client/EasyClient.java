@@ -369,123 +369,128 @@ public final class EasyClient implements ClientMessageDispatcher {
         return syncRequest(EasyPackage.FORMAT_MSGPACK,head,body,timeout);
     }
 
-    public ResponseFuture asyncRequest(String service,String method,ObjectNode body, int timeout) throws Exception {
+    public ResponseFuture asyncRequest(String service,String method,ObjectNode body, int timeout) {
 
         EasyHead head = EasyHead.newInstance();
         head.setService(service).setMethod(method);
         return asyncRequest(EasyPackage.FORMAT_MSGPACK,head,body,timeout);
     }
 
-    public ResponseFuture asyncRequest(int format,EasyHead head,ObjectNode body, int timeout) throws Exception {
+    public ResponseFuture asyncRequest(int format,EasyHead head,ObjectNode body, int timeout) {
         return asyncRequest(format,head,body,timeout,null,0);
     }
 
-    public ResponseFuture asyncRequest(int format,EasyHead head,ObjectNode body, int timeout,String ip,int port) throws Exception
+    public ResponseFuture asyncRequest(int format,EasyHead head,ObjectNode body, int timeout,String ip,int port)
     {
         ResponseFuture future = new ResponseFuture();
 
-        String name = head.getService();
+        try {
 
-        if (name == null){
-            throw new EasyException("service field not found");
-        }
+            String name = head.getService();
 
-        String method = head.getMethod();
-
-        if (method == null){
-            throw new EasyException("method field not found");
-        }
-
-        String routeKey = head.getRouteKey() == null ? "" : head.getRouteKey();
-
-        if(!routeKey.isEmpty()){
-            loadBalanceType = LoadBalance.LB_CONSISTENT_HASH;
-        }
-
-        Node node;
-        if(ip != null){
-            node = new Node(name,ip,port,100);
-        }else{
-            node = nodeMgr.getNode(name,loadBalanceType,routeKey);
-        }
-
-        if (node == null) {
-            throw new EasyServiceNotFoundException("service " + name + " not found");
-        }
-
-        String key = "/" + node.ip + ":" + node.port;
-
-        long sessionId = seqNo.addAndGet(1);
-
-        Long seq = head.getSeq();
-
-        Session session = new Session(node,sessionId,seq,format, head, body, future);
-
-        head.setSeq(sessionId);
-
-        ConcurrentLinkedQueue<Session> sessionQueue;
-        ConnStatus status;
-        ConcurrentHashMap<Long,Session> sessions;
-
-        synchronized (this) {
-            sessionQueue = waitSessions.get(key);
-            if (sessionQueue == null) {
-                sessionQueue = new ConcurrentLinkedQueue<>();
-                waitSessions.put(key, sessionQueue);
+            if (name == null) {
+                throw new EasyException("service field not found");
             }
 
-            status = connStatus.get(key);
-            if (status == null) {
-                status = new ConnStatus();
-                connStatus.put(key, status);
+            String method = head.getMethod();
+
+            if (method == null) {
+                throw new EasyException("method field not found");
             }
 
-            sessions = requestSessions.get(name);
+            String routeKey = head.getRouteKey() == null ? "" : head.getRouteKey();
 
-            if(sessions == null){
-                sessions = new ConcurrentHashMap<>();
-                requestSessions.put(name,sessions);
-            }
-        }
-
-        if (sessions.size() > MAX_SESSION_SIZE){
-            throw new EasyException("service "+name+" session size > "+MAX_SESSION_SIZE);
-        }
-
-        sessions.put(session.sessionId, session);
-        session.timeout = timer.newTimeout(new SessionTimeoutTask(this,name, session.sessionId), timeout, TimeUnit.MILLISECONDS);
-        session.node.active.incrementAndGet();
-
-        ChannelHandlerContext ctx = status.getConnection();
-
-        if (ctx == null) {
-            sessionQueue.add(session);
-
-            if (status.getConnectStatus() == ConnStatus.INIT) {
-
-                status.setConnectStatus(ConnStatus.CONNECTING);
-                boot.connect(node.ip, node.port).addListener(connectFuture->{
-                    if(!connectFuture.isSuccess()){
-                        log.error(connectFuture.cause().getMessage(),connectFuture.cause());
-                    }
-                });
+            if (!routeKey.isEmpty()) {
+                loadBalanceType = LoadBalance.LB_HASH;
             }
 
-        } else {
-
-            int connectCount = status.getConnectionSize();
-            if (connectCount < DEFAULT_CONNECTION_NUM && status.getConnectStatus() != ConnStatus.CONNECTING) {
-                status.setConnectStatus(ConnStatus.CONNECTING);
-                boot.connect(node.ip, node.port).addListener(connectFuture->{
-                    if(!connectFuture.isSuccess()){
-                        log.error(connectFuture.cause().getMessage(),connectFuture.cause());
-                    }
-                });
+            Node node;
+            if (ip != null) {
+                node = new Node(name, ip, port, 100);
+            } else {
+                node = nodeMgr.getNode(name, loadBalanceType, routeKey);
             }
 
-            EasyPackage pkg = EasyPackage.newInstance();
-            ByteBuf buf = pkg.setFormat((byte)format).setHead(head).setBody(body).encode();
-            ctx.writeAndFlush(buf);
+            if (node == null) {
+                throw new EasyServiceNotFoundException("service " + name + " not found");
+            }
+
+            String key = "/" + node.ip + ":" + node.port;
+
+            long sessionId = seqNo.addAndGet(1);
+
+            Long seq = head.getSeq();
+
+            Session session = new Session(node, sessionId, seq, format, head, body, future);
+
+            head.setSeq(sessionId);
+
+            ConcurrentLinkedQueue<Session> sessionQueue;
+            ConnStatus status;
+            ConcurrentHashMap<Long, Session> sessions;
+
+            synchronized (this) {
+                sessionQueue = waitSessions.get(key);
+                if (sessionQueue == null) {
+                    sessionQueue = new ConcurrentLinkedQueue<>();
+                    waitSessions.put(key, sessionQueue);
+                }
+
+                status = connStatus.get(key);
+                if (status == null) {
+                    status = new ConnStatus();
+                    connStatus.put(key, status);
+                }
+
+                sessions = requestSessions.get(name);
+
+                if (sessions == null) {
+                    sessions = new ConcurrentHashMap<>();
+                    requestSessions.put(name, sessions);
+                }
+            }
+
+            if (sessions.size() > MAX_SESSION_SIZE) {
+                throw new EasyException("service " + name + " session size > " + MAX_SESSION_SIZE);
+            }
+
+            sessions.put(session.sessionId, session);
+            session.timeout = timer.newTimeout(new SessionTimeoutTask(this, name, session.sessionId), timeout, TimeUnit.MILLISECONDS);
+            session.node.active.incrementAndGet();
+
+            ChannelHandlerContext ctx = status.getConnection();
+
+            if (ctx == null) {
+                sessionQueue.add(session);
+
+                if (status.getConnectStatus() == ConnStatus.INIT) {
+
+                    status.setConnectStatus(ConnStatus.CONNECTING);
+                    boot.connect(node.ip, node.port).addListener(connectFuture -> {
+                        if (!connectFuture.isSuccess()) {
+                            log.error(connectFuture.cause().getMessage(), connectFuture.cause());
+                        }
+                    });
+                }
+
+            } else {
+
+                int connectCount = status.getConnectionSize();
+                if (connectCount < DEFAULT_CONNECTION_NUM && status.getConnectStatus() != ConnStatus.CONNECTING) {
+                    status.setConnectStatus(ConnStatus.CONNECTING);
+                    boot.connect(node.ip, node.port).addListener(connectFuture -> {
+                        if (!connectFuture.isSuccess()) {
+                            log.error(connectFuture.cause().getMessage(), connectFuture.cause());
+                        }
+                    });
+                }
+
+                EasyPackage pkg = EasyPackage.newInstance();
+                ByteBuf buf = pkg.setFormat((byte) format).setHead(head).setBody(body).encode();
+                ctx.writeAndFlush(buf);
+            }
+        }catch (Exception e){
+            future.setException(e);
         }
         return future;
     }

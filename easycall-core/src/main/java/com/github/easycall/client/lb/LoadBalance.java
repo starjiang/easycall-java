@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface LoadBalance {
 
-    public final static int LB_CONSISTENT_HASH = 1;
+    public final static int LB_HASH = 1;
     public final static int LB_ACTIVE = 2;
     public final static int LB_RANDOM = 3;
     public final static int LB_RANDOM_WEIGHT = 4;

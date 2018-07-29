@@ -21,7 +21,7 @@ public class ActiveLoadBalance  implements LoadBalance{
             return null;
         }
 
-        int index = (int)Math.floor(Math.random() * list.size());
+        int index = 0;
         long min = list.get(0).active.get();
         for(int i=1;i<list.size();i++){
             long v = list.get(i).active.get();
