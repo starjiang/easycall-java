@@ -2,7 +2,7 @@
 easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan 微服务框架，主要特性如下：
 ========================
 * 轻量，依赖少，代码量少，方便阅读，虽然轻量，功能齐全
-* 完全 scheme free 接口调用,无需定义接口interface 文件
+* 完全 scheme free 接口调用,无需定义interface 接口文件
 * 支持跨语言调用python,php,java,c/c++等，凡是支持json/msgpack 序列化的语言都没问题
 * 数据序列化支持 json/msgpack
 * 客户端支持同步，异步调用；服务端支持服务异步机制，可以实现全异步操作
