@@ -28,7 +28,7 @@ easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan �
 ========
 服务主类
 --------
-
+<pre>
 public final class ServiceDemo {
 
     public static void main(String[] args) throws Exception {
@@ -41,9 +41,11 @@ public final class ServiceDemo {
     	
     }
 }
+</pre>
 
 具体业务类
 ---------
+<pre>
 public class SyncDemoWorker {
 
     private Logger log = LoggerFactory.getLogger(SyncDemoWorker.class);
@@ -69,10 +71,10 @@ public class SyncDemoWorker {
     	response.setHead(request.getHead()).setBody(respBoby);
     }
 }
-
+</pre>
 客户端调用
 ---------
-
+<pre>
 public class RequestDemo {
 	
 	public static void main(String[] args) throws Exception
@@ -96,7 +98,7 @@ public class RequestDemo {
 		}
 	}
 }
-
+</pre>
 以上代码可以在com.github.easycall.demo 包底下找到
 
 配置中心说明
