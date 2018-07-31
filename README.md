@@ -65,7 +65,7 @@ public class SyncDemoWorker {
     public void onSetProfile(Request request, Response response) {
     	
     	log.info("req setProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString())
-		  ObjectNode respBoby = Utils.json.createObjectNode();
+	ObjectNode respBoby = Utils.json.createObjectNode();
     	respBoby.put("msg","ok");
     	respBoby.put("ret",0);
     	response.setHead(request.getHead()).setBody(respBoby);
