@@ -6,8 +6,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.client.*;
 import com.github.easycall.client.lb.LoadBalance;
 import com.github.easycall.exception.EasyConnectException;
@@ -17,8 +15,6 @@ import com.github.easycall.exception.EasyTimeoutException;
 import com.github.easycall.proxy.util.PackageFilter;
 import com.github.easycall.util.DaemonThreadFactory;
 import com.github.easycall.util.EasyHead;
-import com.github.easycall.util.EasyPackage;
-import com.github.easycall.util.Utils;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
@@ -42,14 +38,14 @@ import io.netty.util.TimerTask;
 class Session
 {
     public TransportPackage pkg;
-    public ResponseFuture future;
+    public TransportFuture future;
     public long sessionId;
     public long createTime;
     public Long seq;
     public Node node;
     public Timeout timeout;
 
-    public Session(Node node,long sessionId,Long seq,TransportPackage pkg,ResponseFuture future) {
+    public Session(Node node,long sessionId,Long seq,TransportPackage pkg,TransportFuture future) {
         this.sessionId = sessionId;
         this.pkg = pkg;
         this.future = future;
@@ -363,9 +359,9 @@ public final class TransportClient implements ClientMessageDispatcher {
         }
     }
 
-    public ResponseFuture asyncRequest(TransportPackage pkg, int timeout)
+    public TransportFuture asyncRequest(TransportPackage pkg, int timeout)
     {
-        ResponseFuture future = new ResponseFuture();
+        TransportFuture future = new TransportFuture();
 
         try{
 
@@ -384,12 +380,12 @@ public final class TransportClient implements ClientMessageDispatcher {
             }
 
             String routeKey = head.getRouteKey() == null ? "":head.getRouteKey();
-
+            int lbType = loadBalanceType;
             if(!routeKey.isEmpty()){
-                loadBalanceType = LoadBalance.LB_HASH;
+                lbType = LoadBalance.LB_HASH;
             }
 
-            Node node = nodeMgr.getNode(name,loadBalanceType,routeKey);
+            Node node = nodeMgr.getNode(name,lbType,routeKey);
 
             if (node == null) {
                 throw new EasyServiceNotFoundException("service " + name + " not found");

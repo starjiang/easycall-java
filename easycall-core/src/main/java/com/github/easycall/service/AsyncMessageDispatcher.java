@@ -1,5 +1,6 @@
 package com.github.easycall.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyException;
 import com.github.easycall.util.EasyMethod;
@@ -30,7 +31,7 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
         if(msg.getMsg() instanceof EasyPackage)
         {
             EasyPackage reqPkg = (EasyPackage) msg.getMsg();
-            Request request = new Request(reqPkg.getFormat(),msg.getCtx().channel().remoteAddress(),msg.getCreateTime(),reqPkg.getHead(),reqPkg.getBody());
+            Request request = new Request(reqPkg.getFormat(),msg.getCtx().channel().remoteAddress(),msg.getCreateTime(),reqPkg.getHead(),(JsonNode) reqPkg.getBody());
 
             Response response = new Response();
             response.setCtx(msg.getCtx());

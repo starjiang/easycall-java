@@ -141,6 +141,9 @@ public class EasyService {
         	{
         		ServerInfo info = serverList.get(i);
         		serviceRegister.unregister(info.serviceName, info.port);
+        		if (info.pool!= null){
+        			info.pool.stop();
+				}
         	}
         }
     }

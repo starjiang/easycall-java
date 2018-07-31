@@ -16,14 +16,12 @@
 package com.github.easycall.proxy.server;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.github.easycall.proxy.client.ResponseFuture;
+import com.github.easycall.proxy.client.TransportFuture;
 import com.github.easycall.proxy.client.TransportClient;
 import com.github.easycall.proxy.client.TransportPackage;
-import com.github.easycall.util.EasyHead;
 import com.github.easycall.util.EasyPackage;
 import com.github.easycall.util.Utils;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +51,9 @@ public class MessageHandler extends ChannelInboundHandlerAdapter {
 		try
 		{
 			TransportPackage pkg = TransportPackage.newInstance().decode(buf);
-			ResponseFuture responseFuture = client.asyncRequest(pkg, timeout);
+			TransportFuture transportFuture = client.asyncRequest(pkg, timeout);
 
-			responseFuture.setCallback(future -> {
+			transportFuture.setCallback(future -> {
 
 				try{
 					if(future.isException()){

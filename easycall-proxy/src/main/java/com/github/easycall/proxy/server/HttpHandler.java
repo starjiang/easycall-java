@@ -22,7 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import com.github.easycall.exception.EasyInvalidPkgException;
-import com.github.easycall.proxy.client.ResponseFuture;
+import com.github.easycall.proxy.client.TransportFuture;
 import com.github.easycall.proxy.client.TransportClient;
 import com.github.easycall.proxy.client.TransportPackage;
 import com.github.easycall.proxy.util.PackageFilter;
@@ -119,8 +119,8 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 
     private void requestRawAndResponse(ChannelHandlerContext ctx,TransportPackage reqPkg,final boolean keepAlive){
 
-        ResponseFuture responseFuture = client.asyncRequest(reqPkg, timeout);
-        responseFuture.setCallback(future -> {
+        TransportFuture transportFuture = client.asyncRequest(reqPkg, timeout);
+        transportFuture.setCallback(future -> {
             try {
                 if (future.isException()) {
 
@@ -190,8 +190,8 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
 
     private void requestJsonAndResponse(ChannelHandlerContext ctx,TransportPackage reqPkg,final boolean keepAlive){
 
-        ResponseFuture responseFuture = client.asyncRequest(reqPkg, timeout);
-        responseFuture.setCallback(future -> {
+        TransportFuture transportFuture = client.asyncRequest(reqPkg, timeout);
+        transportFuture.setCallback(future -> {
             try {
                 if (future.isException()) {
                     Map<String,String> headers = new HashMap<>();

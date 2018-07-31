@@ -1,5 +1,6 @@
 package com.github.easycall.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.exception.EasyException;
 import com.github.easycall.util.EasyMethod;
@@ -154,7 +155,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
 
                 EasyPackage reqPkg = (EasyPackage) msg.getMsg();
 
-                Request request = new Request(reqPkg.getFormat(),msg.getCtx().channel().remoteAddress(),msg.getCreateTime(),reqPkg.getHead(),reqPkg.getBody());
+                Request request = new Request(reqPkg.getFormat(),msg.getCtx().channel().remoteAddress(),msg.getCreateTime(),reqPkg.getHead(),(JsonNode) reqPkg.getBody());
                 response.setFormat(request.getFormat());
                 onRequest(request,response,index);
                 EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat()).setHead(response.getHead()).setBody(response.getBody());

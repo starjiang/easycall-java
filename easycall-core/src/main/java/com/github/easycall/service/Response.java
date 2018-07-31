@@ -10,7 +10,7 @@ public class Response
 {
     private int format;
 	private EasyHead head;
-	private ObjectNode body;
+	private Object body;
 	private ChannelHandlerContext ctx;
 
     public Response setCtx(ChannelHandlerContext ctx) {
@@ -47,13 +47,13 @@ public class Response
 		return head;
 	}
 	
-	public Response setBody(ObjectNode body)
+	public Response setBody(Object body)
 	{
 		this.body = body;
 		return this;
 	}
 	
-	public ObjectNode getBody()
+	public Object getBody()
 	{
 		return body;
 	}

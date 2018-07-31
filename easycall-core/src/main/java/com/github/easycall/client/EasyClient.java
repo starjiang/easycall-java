@@ -31,7 +31,7 @@ class Session
 {
     public int format;
     public EasyHead head;
-    public ObjectNode body;
+    public Object body;
     public ResponseFuture future;
     public long sessionId;
     public long createTime;
@@ -39,7 +39,7 @@ class Session
     public Node node;
     public Timeout timeout;
 
-    public Session(Node node,long sessionId,Long seq,int format,EasyHead head,ObjectNode body,ResponseFuture future) {
+    public Session(Node node,long sessionId,Long seq,int format,EasyHead head,Object body,ResponseFuture future) {
         this.sessionId = sessionId;
         this.format = format;
         this.head = head;
@@ -344,7 +344,7 @@ public final class EasyClient implements ClientMessageDispatcher {
         }
     }
 
-    public EasyPackage syncRequest(int format,EasyHead head,ObjectNode body, int timeout,String ip,int port) throws Exception{
+    public EasyPackage syncRequest(int format,EasyHead head,Object body, int timeout,String ip,int port) throws Exception{
 
         ResponseFuture responseFuture = asyncRequest(format,head,body,timeout,ip,port);
 
@@ -357,30 +357,30 @@ public final class EasyClient implements ClientMessageDispatcher {
         return pkg;
     }
 
-    public EasyPackage syncRequest(int format,EasyHead head,ObjectNode body, int timeout) throws Exception{
+    public EasyPackage syncRequest(int format,EasyHead head,Object body, int timeout) throws Exception{
         return syncRequest(format,head,body,timeout,null,0);
     }
 
 
-    public EasyPackage syncRequest(String service,String method,ObjectNode body, int timeout) throws Exception {
+    public EasyPackage syncRequest(String service,String method,Object body, int timeout) throws Exception {
 
         EasyHead head = EasyHead.newInstance();
         head.setService(service).setMethod(method);
         return syncRequest(EasyPackage.FORMAT_MSGPACK,head,body,timeout);
     }
 
-    public ResponseFuture asyncRequest(String service,String method,ObjectNode body, int timeout) {
+    public ResponseFuture asyncRequest(String service,String method,Object body, int timeout) {
 
         EasyHead head = EasyHead.newInstance();
         head.setService(service).setMethod(method);
         return asyncRequest(EasyPackage.FORMAT_MSGPACK,head,body,timeout);
     }
 
-    public ResponseFuture asyncRequest(int format,EasyHead head,ObjectNode body, int timeout) {
+    public ResponseFuture asyncRequest(int format,EasyHead head,Object body, int timeout) {
         return asyncRequest(format,head,body,timeout,null,0);
     }
 
-    public ResponseFuture asyncRequest(int format,EasyHead head,ObjectNode body, int timeout,String ip,int port)
+    public ResponseFuture asyncRequest(int format,EasyHead head,Object body, int timeout,String ip,int port)
     {
         ResponseFuture future = new ResponseFuture();
 
@@ -399,16 +399,16 @@ public final class EasyClient implements ClientMessageDispatcher {
             }
 
             String routeKey = head.getRouteKey() == null ? "" : head.getRouteKey();
-
+            int lbType = loadBalanceType;
             if (!routeKey.isEmpty()) {
-                loadBalanceType = LoadBalance.LB_HASH;
+                lbType = LoadBalance.LB_HASH;
             }
 
             Node node;
             if (ip != null) {
                 node = new Node(name, ip, port, 100);
             } else {
-                node = nodeMgr.getNode(name, loadBalanceType, routeKey);
+                node = nodeMgr.getNode(name, lbType, routeKey);
             }
 
             if (node == null) {

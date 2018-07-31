@@ -21,7 +21,7 @@ public class EasyPackage {
 	final public static int ERROR_SERVER_INTERNAL = 1002;
 	final public static int ERROR_METHOD_NOT_FOUND = 1003;
 	private EasyHead head;
-	private ObjectNode body;
+	private Object body;
 	private byte format;
 	
 	public static EasyPackage newInstance()
@@ -34,7 +34,7 @@ public class EasyPackage {
 		format = 0;
 	}
 	
-	public EasyPackage(byte format,EasyHead head, ObjectNode body)
+	public EasyPackage(byte format,EasyHead head, Object body)
 	{
 		this.format = format;
 		this.head = head;
@@ -126,13 +126,13 @@ public class EasyPackage {
 			InputStream headStream = new ByteBufInputStream(data.slice(10,headLen));
 			InputStream bodyStream = new ByteBufInputStream(data.slice(10+headLen,bodyLen));
 			head = Utils.msgpack.readValue(headStream,EasyHead.class);
-			body = Utils.msgpack.readValue(bodyStream,ObjectNode.class);
+			body = Utils.msgpack.readTree(bodyStream);
 
 		} else if (getFormat() == FORMAT_JSON){
 			InputStream headStream = new ByteBufInputStream(data.slice(10,headLen));
 			InputStream bodyStream = new ByteBufInputStream(data.slice(10+headLen,bodyLen));
 			head = Utils.json.readValue(headStream,EasyHead.class);
-			body = Utils.json.readValue(bodyStream,ObjectNode.class);
+			body = Utils.json.readTree(bodyStream);
 		} else{
 			throw new EasyException("invalid package format");
 		}
@@ -143,7 +143,37 @@ public class EasyPackage {
 
 		return this;
 	}
-	
+
+	public <T> EasyPackage decode(ByteBuf data,Class<T> valueType) throws Exception
+	{
+		setFormat(data.getByte(1));
+
+		int headLen = data.getInt(2);
+		int bodyLen = data.getInt(6);
+
+		if (getFormat() == FORMAT_MSGPACK){
+			InputStream headStream = new ByteBufInputStream(data.slice(10,headLen));
+			InputStream bodyStream = new ByteBufInputStream(data.slice(10+headLen,bodyLen));
+			head = Utils.msgpack.readValue(headStream,EasyHead.class);
+			body = Utils.msgpack.readValue(bodyStream,valueType);
+
+		} else if (getFormat() == FORMAT_JSON){
+			InputStream headStream = new ByteBufInputStream(data.slice(10,headLen));
+			InputStream bodyStream = new ByteBufInputStream(data.slice(10+headLen,bodyLen));
+			head = Utils.json.readValue(headStream,EasyHead.class);
+			body = Utils.json.readValue(bodyStream,valueType);
+		} else{
+			throw new EasyException("invalid package format");
+		}
+
+		if(head == null || body == null){
+			throw new EasyException("head or body is null");
+		}
+
+		return this;
+	}
+
+
 	public EasyHead getHead() {
 		return head;
 	}
@@ -154,7 +184,7 @@ public class EasyPackage {
 		return this;
 	}
 	
-	public ObjectNode getBody()
+	public Object getBody()
 	{
 		return body;
 	}
@@ -163,7 +193,7 @@ public class EasyPackage {
 		return Utils.json.convertValue(body,valueType);
 	}
 
-	public EasyPackage setBody(ObjectNode body)
+	public EasyPackage setBody(Object body)
 	{
 		this.body = body;
 		return this;

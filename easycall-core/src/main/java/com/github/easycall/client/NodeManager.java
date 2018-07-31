@@ -100,10 +100,8 @@ public class NodeManager {
 		}
 
 		ArrayList<Node> list;
-
+		lock.lock();
 		try{
-
-			lock.lock();
 
 			name = Utils.ZOOKEEPER_SERVICE_PREFIX+"/"+name+"/nodes";
 			list = serverMap.get(name);

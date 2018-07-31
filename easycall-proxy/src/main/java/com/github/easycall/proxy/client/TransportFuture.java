@@ -1,11 +1,11 @@
 package com.github.easycall.proxy.client;
 
-public class ResponseFuture {
+public class TransportFuture {
 
     private TransportPackage result;
     private volatile boolean done = false;
     private Exception cause;
-    private ResponseCallbackHandler handler;
+    private TransportCallbackHandler handler;
 
     public synchronized void setResult(TransportPackage result) {
 
@@ -17,7 +17,7 @@ public class ResponseFuture {
         notify();
     }
 
-    public synchronized void setCallback(ResponseCallbackHandler handler){
+    public synchronized void setCallback(TransportCallbackHandler handler){
         this.handler = handler;
         if(done){
             this.handler.onResult(this);
