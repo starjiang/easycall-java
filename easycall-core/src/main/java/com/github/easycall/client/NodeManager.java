@@ -29,11 +29,6 @@ public class NodeManager {
 	private final static int ZK_SESSION_TIMEOUT = 10000;
 	private final static int ZK_CONNECT_TIMEOUT = 2000;
 	private final static int ZK_NOT_EXSIT_CACHE_TIME = 5000;
-	private ActiveLoadBalance activeLoadBalance;
-	private HashLoadBalance hashLoadBalance;
-	private RandomLoadBalance randomLoadBalance;
-	private RandomWeightLoadBalance randomWeightLoadBalance;
-	private RoundRobinLoadBalance roundRobinLoadBalance;
 	
 	public NodeManager(String zkConnStr)
 	{
@@ -41,11 +36,6 @@ public class NodeManager {
 		serverMap = new ConcurrentHashMap<>();
 		exsitMap = new HashMap<>();
 		lockMap = new HashMap<>();
-		activeLoadBalance = new ActiveLoadBalance();
-		hashLoadBalance = new HashLoadBalance();
-		randomLoadBalance = new RandomLoadBalance();
-		randomWeightLoadBalance = new RandomWeightLoadBalance();
-		roundRobinLoadBalance = new RoundRobinLoadBalance();
 	}
 		
 	private void getNodesFromZk(String name) throws Exception
@@ -140,19 +130,24 @@ public class NodeManager {
 
 
 		if(loadBalanceType == LoadBalance.LB_ACTIVE){
+			ActiveLoadBalance activeLoadBalance = new ActiveLoadBalance();
             activeLoadBalance.setNodeList(list);
             return activeLoadBalance.getNode();
         } else if(loadBalanceType == LoadBalance.LB_HASH){
-            hashLoadBalance.setRouteKey(routeKey);
+            HashLoadBalance hashLoadBalance = new HashLoadBalance();
+			hashLoadBalance.setRouteKey(routeKey);
             hashLoadBalance.setNodeList(list);
             return hashLoadBalance.getNode();
         }else if(loadBalanceType == LoadBalance.LB_RANDOM){
+			RandomLoadBalance randomLoadBalance = new RandomLoadBalance();
             randomLoadBalance.setNodeList(list);
             return randomLoadBalance.getNode();
         }else if(loadBalanceType == LoadBalance.LB_RANDOM_WEIGHT){
+			RandomWeightLoadBalance randomWeightLoadBalance = new RandomWeightLoadBalance();
             randomWeightLoadBalance.setNodeList(list);
             return randomWeightLoadBalance.getNode();
         }else if(loadBalanceType == LoadBalance.LB_ROUND_ROBIN){
+			RoundRobinLoadBalance roundRobinLoadBalance = new RoundRobinLoadBalance();
             roundRobinLoadBalance.setNodeList(list);
             return roundRobinLoadBalance.getNode();
         }else {
