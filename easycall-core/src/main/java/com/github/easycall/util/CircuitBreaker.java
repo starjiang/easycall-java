@@ -3,7 +3,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -18,7 +17,13 @@ class CbInfo{
     public long lastCircuitBreakerTime;
     public long lastLimitPassTime;
     public long lastResetTime;
-    volatile  int status;
+    public volatile  int status;
+    public double failRate;
+    public double limitRate;
+    public long countBase;
+    public long failTime;
+    public long limitTime;
+    public long resetTime;
 
     public CbInfo(){
         invokeCount = new AtomicLong(1);
@@ -27,6 +32,12 @@ class CbInfo{
         lastLimitPassTime = 0;
         lastResetTime = System.currentTimeMillis();
         status = CB_CLOSE;
+        failRate = CircuitBreaker.FAIL_RATE;
+        limitRate = CircuitBreaker.LIMIT_RATE;
+        countBase = CircuitBreaker.COUNT_BASE;
+        failTime = CircuitBreaker.FAIL_TIME;
+        limitTime = CircuitBreaker.LIMIT_TIME;
+        resetTime = CircuitBreaker.RESET_TIME;
     }
 }
 
@@ -36,15 +47,52 @@ public class CircuitBreaker {
 
     public static Logger log = LoggerFactory.getLogger(CircuitBreaker.class);
 
-    private final static double FAIL_RATE = 0.5;
-    private final static double LIMIT_RATE = 0.2;
-    private final static long COUNT_BASE = 10;
-    private final static long FAIL_TIME = 30000;
-    private final static long LIMIT_TIME = 30000;
-    private final static long RESET_TIME = 60000;
+    public final static double FAIL_RATE = 0.5;
+    public final static double LIMIT_RATE = 0.2;
+    public final static long COUNT_BASE = 10;
+    public final static long FAIL_TIME = 30000;
+    public final static long LIMIT_TIME = 30000;
+    public final static long RESET_TIME = 60000;
 
     private static HashMap<String,CbInfo> infoMap = new HashMap<>();
     private static HashMap<String,ReentrantLock> lockMap = new HashMap<>();
+
+
+    public static void configure(String cbName,double failRate,double limitRate,long countBase,long failTime,long limitTime,long resetTime){
+
+        ReentrantLock cbLock;
+        synchronized (CircuitBreaker.class) {
+            cbLock = lockMap.get(cbName);
+            if (cbLock == null) {
+                cbLock = new ReentrantLock();
+                lockMap.put(cbName, cbLock);
+            }
+        }
+
+        cbLock.lock();
+
+        CbInfo info;
+        try{
+
+            info = infoMap.get(cbName);
+
+            if(info == null){
+                info = new CbInfo();
+                infoMap.put(cbName,info);
+            }
+
+            info.failRate = failRate;
+            info.limitRate = limitRate;
+            info.countBase = countBase;
+            info.failTime = failTime;
+            info.limitTime = limitTime;
+            info.resetTime = resetTime;
+
+
+        }finally {
+            cbLock.unlock();
+        }
+    }
 
     public static <R> R call(String cbName, UncheckedFunction<R> supplier, R defaultValue) throws Exception{
 
@@ -72,7 +120,7 @@ public class CircuitBreaker {
             }
 
             //熔断过期后，把熔断器状态设置为半开状
-            if(info.status == CbInfo.CB_OPEN && info.lastCircuitBreakerTime+FAIL_TIME < timeNow){
+            if(info.status == CbInfo.CB_OPEN && info.lastCircuitBreakerTime+info.failTime < timeNow){
                 info.status = CbInfo.CB_LIMIT;
                 info.failCount.set(0);
                 info.invokeCount.set(1);
@@ -87,7 +135,7 @@ public class CircuitBreaker {
             }else if(info.status == CbInfo.CB_LIMIT){
                 //半开状态下，随机计算允许通过的请求
                 double rand = Math.random();
-                if(rand < LIMIT_RATE){
+                if(rand < info.limitRate){
                     ptFlag = true;
                 }
             }else{
@@ -101,7 +149,7 @@ public class CircuitBreaker {
             //计算熔断阀值，超过阀值，熔断
             double f = (double)info.failCount.get()/(double) info.invokeCount.get();
 
-            if(f > FAIL_RATE && info.invokeCount.get() > COUNT_BASE){
+            if(f > info.failRate && info.invokeCount.get() > info.countBase){
                 info.status = CbInfo.CB_OPEN;
                 info.lastCircuitBreakerTime = timeNow;
                 log.error("CircuitBreaker {} set status open",cbName);
@@ -109,7 +157,7 @@ public class CircuitBreaker {
             }
 
             //半开状态下，请求没超过阀值，关闭熔断器
-            if(info.status == CbInfo.CB_LIMIT && info.lastLimitPassTime+LIMIT_TIME < timeNow){
+            if(info.status == CbInfo.CB_LIMIT && info.lastLimitPassTime+info.limitTime < timeNow){
                 info.status = CbInfo.CB_CLOSE;
                 info.invokeCount.set(1);
                 info.failCount.set(0);
@@ -118,7 +166,7 @@ public class CircuitBreaker {
             }
 
             //重置统计
-            if(info.status == CbInfo.CB_CLOSE && info.lastResetTime + RESET_TIME < timeNow){
+            if(info.status == CbInfo.CB_CLOSE && info.lastResetTime + info.resetTime < timeNow){
                 info.lastResetTime = timeNow;
                 info.failCount.set(0);
                 info.invokeCount.set(1);
