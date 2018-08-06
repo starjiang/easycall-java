@@ -7,7 +7,7 @@ easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan �
 * 数据序列化支持 json/msgpack
 * 客户端支持同步，异步调用；服务端支持服务异步机制，可以实现全异步操作
 * 负载均衡支持随机，轮询，随机权重，动态负载，hash 五种负载均衡算法
-* 已经集成配置中心，配置中心基于zookeepr
+* 已经集成配置中心，配置中心基于zookeeper,实现配置动态加载
 * 支持熔断机制,方便服务降级
 * 支持API网关，网关支持http json,easycall协议
 * 目前服务注册只支持zookeeper
@@ -28,7 +28,7 @@ easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan �
 ========
 服务主类
 --------
-<pre>
+```
 public final class ServiceDemo {
 
     public static void main(String[] args) throws Exception {
@@ -41,11 +41,11 @@ public final class ServiceDemo {
     	
     }
 }
-</pre>
+```
 
 具体业务类
 ---------
-<pre>
+```
 public class SyncDemoWorker {
 
     private Logger log = LoggerFactory.getLogger(SyncDemoWorker.class);
@@ -71,10 +71,10 @@ public class SyncDemoWorker {
     	response.setHead(request.getHead()).setBody(respBoby);
     }
 }
-</pre>
+```
 客户端调用
 ---------
-<pre>
+```
 public class RequestDemo {
 	
 	public static void main(String[] args) throws Exception
@@ -98,7 +98,7 @@ public class RequestDemo {
 		}
 	}
 }
-</pre>
+```
 以上代码可以在com.github.easycall.demo 包底下找到
 
 配置中心说明
@@ -107,7 +107,7 @@ public class RequestDemo {
 * 2.配置中心会默认读取classpath 下的system.properties 配置文件，根据config.zk,config.name,config.path 来读取远程配置
 * 3.配置中心的加载读取功能实现在easycall-core模块里，管理功能实现在easycall-config 模块里
 * 4.配置中心目前缺用户管理认证功能
-<pre>
+```
 config.zk 配置所在的zookeeper
 config.name 配置名，用来区分各模块配置
 config.path 远程配置持久化到本地的存储路径
@@ -118,4 +118,4 @@ config.path 远程配置持久化到本地的存储路径
 4.读取持久化到本地的配置${config.path}/${config.name}/remote/${config.name}.properties 如果存在的话
 5.读取${config.path}/${config.name}/local/${config.name}.properties 配置，如果存在的话
 6.EasyConfig 会监听zookeeper /easycall/config/${config.name}/version 节点，当里面版本有变化，会通知EasyConfig reload 配置。
-</pre>
+```
