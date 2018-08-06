@@ -34,30 +34,33 @@ public class EasyConfig {
 		{
 			InputStream in = getClass().getClassLoader().getResourceAsStream("system.properties");
 			if(in == null){
-				throw  new EasyException("system.properties not found");
+				logger.error("system.properties not found");
+				return;
 			}
 
 			logger.info("load config from system.properties");
 			loadFileConfig(in);
 
 			configName = getString("config.name");
-			configPath = getString("config.path");
+			configPath = getString("config.save.path");
 			configZk = getString("config.zk");
 
 			if (configName == null || configPath == null || configZk == null){
-			    throw new EasyException("local remote config not set");
+			    logger.error("config not settle");
+			    return;
             }
-			
-			client = new ZkClient(configZk, ZK_SESSION_TIMEOUT,ZK_CONNECT_TIMEOUT,new ZkStringSerializer());
-			
+
+            if (client == null){
+				client = new ZkClient(configZk, ZK_SESSION_TIMEOUT,ZK_CONNECT_TIMEOUT,new ZkStringSerializer());
+				logger.info("subscribe {} config from zookeeper",configName);
+				subscribeRemoteConfig();
+			}
+
 			logger.info("load remote {} config from zookeeper",configName);
 			loadRemoteConfig();
 
             logger.info("load local {} config",configName);
             loadLocalConfig();
-
-            logger.info("subscribe {} config from zookeeper",configName);
-            subscribeRemoteConfig();
 
             printConfig();
 
@@ -95,9 +98,8 @@ public class EasyConfig {
         client.subscribeDataChanges(versionPath, new IZkDataListener() {
             @Override
             public void handleDataChange(String s, Object o) throws Exception {
-                logger.info("{} node changed,reload remote config",s);
-                loadRemoteConfig();
-                printConfig();
+                logger.info("{} node changed,reload config",s);
+                load();
             }
 
             @Override
@@ -556,7 +558,60 @@ public class EasyConfig {
 			return new HashMap<String,Long>();
 		}
 	}
-	
+
+	public HashMap<String,Double> getDoubleMap(String name)
+	{
+		if(config.containsKey(name))
+		{
+			String value = config.get(name);
+
+			String []values = value.split(",");
+
+			HashMap<String, Double> map = new HashMap<String, Double>();
+
+			for(int i=0;i<values.length;i++)
+			{
+				String [] values2 = values[i].split(":");
+				if(values2.length == 2)
+				{
+					map.put(values2[0], Double.valueOf(values2[1]));
+				}
+			}
+
+			return map;
+		}
+		else
+		{
+			return new HashMap<String,Double>();
+		}
+	}
+
+	public HashMap<String,Boolean> getBooleanMap(String name)
+	{
+		if(config.containsKey(name))
+		{
+			String value = config.get(name);
+
+			String []values = value.split(",");
+
+			HashMap<String, Boolean> map = new HashMap<String, Boolean>();
+
+			for(int i=0;i<values.length;i++)
+			{
+				String [] values2 = values[i].split(":");
+				if(values2.length == 2)
+				{
+					map.put(values2[0], Boolean.valueOf(values2[1]));
+				}
+			}
+
+			return map;
+		}
+		else
+		{
+			return new HashMap<String,Boolean>();
+		}
+	}
 	
 	public HashMap<String,String> getStringMap(String name)
 	{
