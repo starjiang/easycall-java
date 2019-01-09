@@ -75,7 +75,7 @@ class SessionTimeoutTask implements TimerTask
     }
 }
 
-class ConnStatus
+class ConnectionManager
 {
     public final static int INIT = 0;
     public final static int CONNECTING = 1;
@@ -149,7 +149,7 @@ class ConnStatus
         return ctx;
     }
 
-    public ConnStatus() {
+    public ConnectionManager() {
         connectStatus = INIT;
         connectionMap = new ConcurrentHashMap<>();
     }
@@ -171,7 +171,7 @@ public final class EasyClient implements ClientMessageDispatcher {
     private HashedWheelTimer timer;
     private ConcurrentHashMap<String,ConcurrentLinkedQueue<Session>> waitSessions;
     private ConcurrentHashMap<String,ConcurrentHashMap<Long, Session>> requestSessions;
-    private ConcurrentHashMap<String, ConnStatus> connStatus;
+    private ConcurrentHashMap<String, ConnectionManager> connMgrs;
     private NodeManager nodeMgr;
     private int loadBalanceType;
 
@@ -190,7 +190,7 @@ public final class EasyClient implements ClientMessageDispatcher {
         timer = new HashedWheelTimer(threadFactoryTimer, DEFAULT_TICK_DURATION, TimeUnit.MILLISECONDS);
         waitSessions = new ConcurrentHashMap<>();
         requestSessions = new ConcurrentHashMap<>();
-        connStatus = new ConcurrentHashMap<>();
+        connMgrs = new ConcurrentHashMap<>();
         seqNo = new AtomicLong(1);
 
         group = new NioEventLoopGroup(workerThreadNum, threadFactoryNetty);
@@ -298,20 +298,20 @@ public final class EasyClient implements ClientMessageDispatcher {
 
     public void onClose(ChannelHandlerContext ctx) {
         log.info("connect from {} to {} closed",ctx.channel().localAddress().toString(),ctx.channel().remoteAddress());
-        ConnStatus status = connStatus.get(ctx.channel().remoteAddress().toString());
-        if (status != null) {
-            status.removeConnection(ctx);
+        ConnectionManager connMgr = connMgrs.get(ctx.channel().remoteAddress().toString());
+        if (connMgr != null) {
+            connMgr.removeConnection(ctx);
         }
     }
 
     public void onConnection(ChannelHandlerContext ctx) {
         log.info("connect from {} to {} connected",ctx.channel().localAddress().toString(),ctx.channel().remoteAddress());
         String key = ctx.channel().remoteAddress().toString();
-        ConnStatus status = connStatus.get(key);
-        if (status != null) {
-            status.addConnection(ctx);
+        ConnectionManager connMgr = connMgrs.get(key);
+        if (connMgr != null) {
+            connMgr.addConnection(ctx);
         }
-        sendWaitSessions(key,status);
+        sendWaitSessions(key,connMgr);
     }
 
     public void onError(ChannelHandlerContext ctx, Throwable cause) {
@@ -319,7 +319,7 @@ public final class EasyClient implements ClientMessageDispatcher {
         log.error(cause.getMessage(),cause);
     }
 
-    private void sendWaitSessions(String key,ConnStatus status){
+    private void sendWaitSessions(String key,ConnectionManager connMgr){
 
         ConcurrentLinkedQueue<Session> sessionQueue = waitSessions.get(key);
 
@@ -331,7 +331,7 @@ public final class EasyClient implements ClientMessageDispatcher {
 
         while(((session = sessionQueue.poll()) != null)){
 
-            ChannelHandlerContext ctx = status.getConnection();
+            ChannelHandlerContext ctx = connMgr.getConnection();
             if(ctx != null){
                 try{
                     EasyPackage pkg = EasyPackage.newInstance();
@@ -426,7 +426,7 @@ public final class EasyClient implements ClientMessageDispatcher {
             head.setSeq(sessionId);
 
             ConcurrentLinkedQueue<Session> sessionQueue;
-            ConnStatus status;
+            ConnectionManager connMgr;
             ConcurrentHashMap<Long, Session> sessions;
 
             synchronized (this) {
@@ -436,10 +436,10 @@ public final class EasyClient implements ClientMessageDispatcher {
                     waitSessions.put(key, sessionQueue);
                 }
 
-                status = connStatus.get(key);
-                if (status == null) {
-                    status = new ConnStatus();
-                    connStatus.put(key, status);
+                connMgr = connMgrs.get(key);
+                if (connMgr == null) {
+                    connMgr = new ConnectionManager();
+                    connMgrs.put(key, connMgr);
                 }
 
                 sessions = requestSessions.get(name);
@@ -458,14 +458,14 @@ public final class EasyClient implements ClientMessageDispatcher {
             session.timeout = timer.newTimeout(new SessionTimeoutTask(this, name, session.sessionId), timeout, TimeUnit.MILLISECONDS);
             session.node.active.incrementAndGet();
 
-            ChannelHandlerContext ctx = status.getConnection();
+            ChannelHandlerContext ctx = connMgr.getConnection();
 
             if (ctx == null) {
                 sessionQueue.add(session);
 
-                if (status.getConnectStatus() == ConnStatus.INIT) {
+                if (connMgr.getConnectStatus() == ConnectionManager.INIT) {
 
-                    status.setConnectStatus(ConnStatus.CONNECTING);
+                    connMgr.setConnectStatus(ConnectionManager.CONNECTING);
                     boot.connect(node.ip, node.port).addListener(connectFuture -> {
                         if (!connectFuture.isSuccess()) {
                             log.error(connectFuture.cause().getMessage(), connectFuture.cause());
@@ -475,9 +475,9 @@ public final class EasyClient implements ClientMessageDispatcher {
 
             } else {
 
-                int connectCount = status.getConnectionSize();
-                if (connectCount < DEFAULT_CONNECTION_NUM && status.getConnectStatus() != ConnStatus.CONNECTING) {
-                    status.setConnectStatus(ConnStatus.CONNECTING);
+                int connectCount = connMgr.getConnectionSize();
+                if (connectCount < DEFAULT_CONNECTION_NUM && connMgr.getConnectStatus() != ConnectionManager.CONNECTING) {
+                    connMgr.setConnectStatus(ConnectionManager.CONNECTING);
                     boot.connect(node.ip, node.port).addListener(connectFuture -> {
                         if (!connectFuture.isSuccess()) {
                             log.error(connectFuture.cause().getMessage(), connectFuture.cause());
