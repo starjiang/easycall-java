@@ -15,14 +15,13 @@ public class EasyConfig {
 
 	static Logger logger = LoggerFactory.getLogger(EasyConfig.class);
 	private final static String CONFIG_PATH="./conf";
-	private final static Integer RECONNECT_INTERVAL = 10000;
+	private final static Integer RECONNECT_INTERVAL = 30000;
 	private final static Long PING_INTERVAL = 90L;
 	private final static String CONFIG_HOST="config.easycall.com:8080";
 	private  HashMap<String, String> config = new HashMap<>();
 	public final static EasyConfig instance  = new EasyConfig();
 	private WebSocket webSocket;
 	private String configName;
-
 
 	private EasyConfig()
 	{
@@ -327,6 +326,19 @@ public class EasyConfig {
         }
         return properties;
     }
+
+	public Properties getProperties(){
+
+		Properties properties = new Properties();
+		Iterator<Entry<String, String>> it = config.entrySet().iterator();
+		while(it.hasNext())
+		{
+			Entry<String,String> en = it.next();
+			properties.put(en.getKey(),en.getValue());
+
+		}
+		return properties;
+	}
 
     public Properties getByPrefix(String prefix){
 

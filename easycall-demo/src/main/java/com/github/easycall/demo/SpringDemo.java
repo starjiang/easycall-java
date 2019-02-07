@@ -3,6 +3,9 @@ package com.github.easycall.demo;
 import com.github.easycall.core.client.EasyClient;
 import com.github.easycall.core.client.lb.LoadBalance;
 import com.github.easycall.core.service.EasyService;
+import com.github.easycall.core.util.EasyConfig;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -13,16 +16,29 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SpringDemo {
 
+    @Value("${service.zk}")
+    private String zkConnStr;
+
+    @Value("${thread.num}")
+    private int threadNum;
+
     @Bean
     public EasyService easyService(){
-        EasyService service = new EasyService("127.0.0.1:2181");
+        EasyService service = new EasyService(zkConnStr);
         return service;
     }
 
     @Bean
     public EasyClient easyClient(){
-        EasyClient client = new EasyClient("127.0.0.1:2181",4, LoadBalance.LB_ACTIVE);
+        EasyClient client = new EasyClient(zkConnStr,threadNum, LoadBalance.LB_ACTIVE);
         return client;
+    }
+
+    @Bean
+    public static PropertyPlaceholderConfigurer propertyPlaceholderConfigurer() {
+        PropertyPlaceholderConfigurer ppc = new PropertyPlaceholderConfigurer();
+        ppc.setProperties(EasyConfig.instance.getProperties());
+        return ppc;
     }
 
     public static void main(String[] args) throws Exception {
