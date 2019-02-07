@@ -21,7 +21,7 @@ easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan �
 
 关于对spring 支持
 ===============
-* 考虑到easycall
+* easycall 是轻量级微服务框架，整合到spring 非常容易，demo 里面有相关跟spring 整合的例子
 
 服务端列子
 ========
@@ -100,21 +100,20 @@ public class RequestDemo {
 ```
 以上代码可以在com.github.easycall.demo 包底下找到
 
-配置中心说明
+配置中心使用说明
 ----------
-* 1.配置中心目前基于zookeeper 实现
-* 2.配置中心会默认读取classpath 下的system.properties 配置文件，根据config.zk,config.name,config.path 来读取远程配置
-* 3.配置中心的加载读取功能实现在easycall-core模块里，管理功能实现在easycall-config 模块里
-* 4.配置中心目前缺用户管理认证功能
+* 1.EasyConfig类目前基于http+websocket实现,http 获取远程配置，websocket 解决配置修改通知
+* 2.EasyConfig类会默认读取classpath 下的application.properties 配置文件，根据config.name 配置项来读取远程配置
+* 3.EasyConfig类功能实现在easycall-core模块里，管理功能实现在easycall-config 模块里
+* 4.配置中心使用前，需要设置host,向 /etc/hosts 文件添加 127.0.0.1 config.easycall.com，因为域名写死在代码里面
+* 5.配置默认保存运行目录的conf 下，不能修改
 ```
-config.zk 配置所在的zookeeper
 config.name 配置名，用来区分各模块配置
-config.path 远程配置持久化到本地的存储路径
 配置加载，持久化机制
-1.EasyConfig 先读取system.properties 配置获取config.zk,config.name,config.path
-2.根据配置检查比较远程配置版本,从${config.path}/${config.name}/remote/version 文件读取本地版本，从/easycall/config/${config.name}/version 读取远程版本，本地版本小于远程版本，进入下一步,否则进入到第4步
-3.从zookeeper 上读取对应/easycall/config/${config.name}/data 配置，持久化到本地,命名为${config.path}/${config.name}/remote/${config.name}.properties
-4.读取持久化到本地的配置${config.path}/${config.name}/remote/${config.name}.properties 如果存在的话
-5.读取${config.path}/${config.name}/local/${config.name}.properties 配置，如果存在的话
-6.EasyConfig 会监听zookeeper /easycall/config/${config.name}/version 节点，当里面版本有变化，会通知EasyConfig reload 配置。
+1.EasyConfig类 先读取application.properties 配置获取config.name 配置项
+2.根据配置检查比较远程配置版本,从./conf/${config.name}/remote/version 文件读取本地版本，从http://config.easycall.com:8080/config/version?name=${config.name} 读取远程版本，本地版本小于远程版本，进入下一步,否则进入到第4步
+3.从http://config.easycall.com:8080/config/info?name=${config.name} ，持久化到本地,命名为./conf/${config.name}/remote/${config.name}.properties
+4.读取持久化到本地的配置./conf/${config.name}/remote/${config.name}.properties 如果存在的话
+5.读取./conf/${config.name}/local/${config.name}.properties 配置，如果存在的话
+6.EasyConfig类 通过websocket接收版本变化，收到通知，EasyConfig类会reload 配置。
 ```
