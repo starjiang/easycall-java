@@ -2,7 +2,7 @@ package com.github.easycall.gateway.util;
 
 import java.util.Properties;
 
-public class ProxyConfig {
+public class GatewayConfig {
     private String zk;
     private int port;
     private int httpPort;
@@ -14,11 +14,11 @@ public class ProxyConfig {
     private int backendTimeout;
     private boolean httpEnableGZip;
 
-    public ProxyConfig(){
+    public GatewayConfig(){
         init(new Properties());
     }
 
-    public ProxyConfig(Properties properties){
+    public GatewayConfig(Properties properties){
 
         init(properties);
     }

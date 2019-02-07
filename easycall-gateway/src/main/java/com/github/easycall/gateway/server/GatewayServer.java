@@ -3,7 +3,7 @@ package com.github.easycall.gateway.server;
 import com.github.easycall.core.client.lb.LoadBalance;
 import com.github.easycall.gateway.client.TransportClient;
 import com.github.easycall.gateway.util.PackageFilter;
-import com.github.easycall.gateway.util.ProxyConfig;
+import com.github.easycall.gateway.util.GatewayConfig;
 import com.github.easycall.core.util.DaemonThreadFactory;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import org.slf4j.Logger;
@@ -28,11 +28,11 @@ public class GatewayServer {
 	
 	
 	final static private int ACCEPT_BACKLOG = 2048;
-    private ProxyConfig config;
+    private GatewayConfig config;
 	private TransportClient client;
 	static Logger log = LoggerFactory.getLogger(GatewayServer.class);
 	
-	public GatewayServer(ProxyConfig config) throws Exception
+	public GatewayServer(GatewayConfig config) throws Exception
 	{
         this.config = config;
 		this.client = new TransportClient(config.getZk(),config.getBackendThreadNum(), LoadBalance.LB_ACTIVE);
