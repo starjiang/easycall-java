@@ -107,13 +107,14 @@ public class RequestDemo {
 * 3.EasyConfig类功能实现在easycall-core模块里，管理功能实现在easycall-config 模块里
 * 4.配置中心使用前，需要设置host,向 /etc/hosts 文件添加 127.0.0.1 config.easycall.com，因为域名写死在代码里面
 * 5.配置默认保存运行目录的conf 下，不能修改
-```
-config.name 配置名，用来区分各模块配置
 配置加载，持久化机制
-1.EasyConfig类 先读取application.properties 配置获取config.name 配置项
-2.根据配置检查比较远程配置版本,从./conf/${config.name}/remote/version 文件读取本地版本，从http://config.easycall.com:8080/config/version?name=${config.name} 读取远程版本，本地版本小于远程版本，进入下一步,否则进入到第4步
-3.从http://config.easycall.com:8080/config/info?name=${config.name} ，持久化到本地,命名为./conf/${config.name}/remote/${config.name}.properties
-4.读取持久化到本地的配置./conf/${config.name}/remote/${config.name}.properties 如果存在的话
-5.读取./conf/${config.name}/local/${config.name}.properties 配置，如果存在的话
-6.EasyConfig类 通过websocket接收版本变化，收到通知，EasyConfig类会reload 配置。
-```
+-----------------
+* config.name 配置名，用来区分各模块配置
+
+* 1.EasyConfig类 先读取application.properties 配置获取config.name 配置项
+* 2.根据配置检查比较远程配置版本,从./conf/${config.name}/remote/version 文件读取本地版本，从http://config.easycall.com:8080/config/version?name=${config.name} 读取远程版本，本地版本小于远程版本，进入下一步,否则进入到第4步
+* 3.从http://config.easycall.com:8080/config/info?name=${config.name} ，持久化到本地,命名为./conf/${config.name}/remote/${config.name}.properties
+* 4.读取持久化到本地的配置./conf/${config.name}/remote/${config.name}.properties 如果存在的话
+* 5.读取./conf/${config.name}/local/${config.name}.properties 配置，如果存在的话
+* 6.EasyConfig类 通过websocket接收版本变化，收到通知，EasyConfig类会reload 配置。
+
