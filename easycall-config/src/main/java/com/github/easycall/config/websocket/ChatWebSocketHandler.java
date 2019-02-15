@@ -1,5 +1,7 @@
 package com.github.easycall.config.websocket;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.github.easycall.config.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.*;
@@ -16,13 +18,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler{
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        logger.info("recv msg:{}", message.getPayload());
+        logger.info("{},{}",session.getId(), message.getPayload());
+        JsonNode pkg = Utils.om.readTree(message.getPayload());
+        String event = pkg.get("event").asText();
+        if(event.equals("ping")){
+            session.sendMessage(new TextMessage("{\"event\":\"pong\",\"data\":{}}"));
+            WebSocketNotification.updateConfigConnection(session);
+        }
     }
 
     @Override
     protected void handlePongMessage(WebSocketSession session, PongMessage message) throws Exception {
         logger.info("{},{} pong",session.getId(),session.getRemoteAddress());
-        WebSocketNotification.updateConfigConnection(session);
     }
 
 

@@ -22,18 +22,18 @@ public class NodeManager {
 	static Logger logger = LoggerFactory.getLogger(NodeManager.class);
 
 	private ConcurrentHashMap<String,ArrayList<Node>> serverMap;
-	private HashMap<String,Long> exsitMap;
-	private HashMap<String,ReentrantLock> lockMap;
+	private HashMap<String,Long> existMap;
+	private HashMap<String,Object> lockMap;
 	private ZkClient client;
 	private final static int ZK_SESSION_TIMEOUT = 10000;
 	private final static int ZK_CONNECT_TIMEOUT = 2000;
-	private final static int ZK_NOT_EXSIT_CACHE_TIME = 5000;
+	private final static int ZK_NOT_EXIST_CACHE_TIME = 5000;
 	
 	public NodeManager(String zkConnStr)
 	{
 		client = new ZkClient(zkConnStr, ZK_SESSION_TIMEOUT,ZK_CONNECT_TIMEOUT,new ZkStringSerializer());
 		serverMap = new ConcurrentHashMap<>();
-		exsitMap = new HashMap<>();
+		existMap = new HashMap<>();
 		lockMap = new HashMap<>();
 	}
 		
@@ -79,18 +79,18 @@ public class NodeManager {
 	
 	public Node getNode(String name,int loadBalanceType,String routeKey) throws Exception
 	{
-		ReentrantLock lock;
+		Object lock;
 		synchronized (this){
 			lock =  lockMap.get(name);
 			if(lock == null) {
-				lock = new ReentrantLock();
+				lock = new Object();
 				lockMap.put(name,lock);
 			}
 		}
 
 		ArrayList<Node> list;
-		lock.lock();
-		try{
+
+		synchronized (lock) {
 
 			name = Utils.ZOOKEEPER_SERVICE_PREFIX+"/"+name+"/nodes";
 			list = serverMap.get(name);
@@ -99,7 +99,7 @@ public class NodeManager {
 			{
 				Long currentTime = System.currentTimeMillis();
 
-				if(exsitMap.getOrDefault(name,0L)+ZK_NOT_EXSIT_CACHE_TIME > currentTime){
+				if(existMap.getOrDefault(name,0L)+ZK_NOT_EXIST_CACHE_TIME > currentTime){
 					return null;
 				}
 
@@ -108,7 +108,7 @@ public class NodeManager {
 
 				if(list == null)
 				{
-					exsitMap.put(name,currentTime);
+					existMap.put(name,currentTime);
 					return null;
 			 	}
 				else
@@ -123,8 +123,6 @@ public class NodeManager {
 					});
 				}
 			}
-		}finally {
-			lock.unlock();
 		}
 
 

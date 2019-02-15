@@ -11,19 +11,21 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class AsyncMessageDispatcher implements MessageDispatcher{
 
     private static Logger log = LoggerFactory.getLogger(AsyncMessageDispatcher.class);
-    private HashMap<String, Method> methodMap = new HashMap<String,Method>();
-    private HashMap<Long,Object> objMap;
+    private Map<String, Method> methodMap;
+    private Map<Long,Object> objMap;
     private Class<?> clazz;
 
 
     public AsyncMessageDispatcher(Class<?> clazz) {
         this.clazz = clazz;
-        objMap = new HashMap<>();
-        init();
+        this.objMap = new HashMap<>();
+        this.methodMap = Utils.getMethodMap(clazz);
     }
 
     public void dispatch(Message msg)
@@ -33,11 +35,21 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
             EasyPackage reqPkg = (EasyPackage) msg.getMsg();
             Request request = new Request(reqPkg.getFormat(),msg.getCtx().channel().remoteAddress(),msg.getCreateTime(),reqPkg.getHead(),(JsonNode) reqPkg.getBody());
 
-            Response response = new Response();
-            response.setCtx(msg.getCtx());
-            response.setFormat(request.getFormat());
+            CompletableFuture<Response> completableFuture = onRequest(request);
 
-            onRequest(request,response);
+            if(completableFuture == null){
+                onIOException(new EasyException("method "+reqPkg.getHead().getMethod()+" response is null or void"));
+                return;
+            }
+
+            completableFuture.thenAccept(response -> {
+                EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat()).setHead(response.getHead()).setBody(response.getBody());
+                try{
+                    msg.getCtx().writeAndFlush(respPkg.encode());
+                }catch (Exception e){
+                    onIOException(e);
+                }
+            });
 
         }
         else if(msg.getMsg() instanceof Throwable)
@@ -53,7 +65,7 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
 
     }
 
-    private void onRequest(Request request, Response response)
+    private CompletableFuture<Response> onRequest(Request request)
     {
         try
         {
@@ -66,11 +78,13 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
             Method method = methodMap.get(callMethod);
             if(method == null)
             {
+                CompletableFuture<Response> completableFuture = new CompletableFuture<>();
                 ObjectNode respBody = Utils.json.createObjectNode();
                 request.getHead().setMsg("method "+callMethod+" not found");
                 request.getHead().setRet(EasyPackage.ERROR_METHOD_NOT_FOUND);
-                response.setHead(request.getHead()).setBody(respBody).flush();
+                completableFuture.complete(new Response().setHead(request.getHead()).setBody(respBody));
                 log.error("method not found,req={}",request.getHead().toString());
+                return completableFuture;
             }
             else
             {
@@ -84,39 +98,19 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
                     }
                 }
 
-                method.invoke(obj, request,response);
+                return (CompletableFuture<Response>) method.invoke(obj, request);
             }
 
         }
         catch (Exception e)
         {
+            CompletableFuture<Response> completableFuture = new CompletableFuture<>();
             ObjectNode respBody = Utils.json.createObjectNode();
             request.getHead().setMsg(e.getMessage());
             request.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
-            try{
-                response.setHead(request.getHead()).setBody(respBody).flush();
-            }catch (Exception e1){
-                log.error(e1.getMessage(),e1);
-            }
+            completableFuture.complete(new Response().setHead(request.getHead()).setBody(respBody));
             log.error("req={}",request.getHead().toString(),e);
-
-        }
-
-    }
-
-    private void init()
-    {
-
-        Method[] methods = clazz.getMethods();
-
-        for(int i=0;i<methods.length;i++)
-        {
-            boolean flag = methods[i].isAnnotationPresent(EasyMethod.class);
-            if(flag)
-            {
-                EasyMethod handler = methods[i].getAnnotation(EasyMethod.class);
-                methodMap.put(handler.method(), methods[i]);
-            }
+            return completableFuture;
         }
 
     }

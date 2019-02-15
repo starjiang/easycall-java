@@ -1,15 +1,14 @@
 package com.github.easycall.core.client;
 import com.github.easycall.core.util.EasyPackage;
 
-
 public class ResponseFuture {
 
-    private EasyPackage result;
+    private volatile EasyPackage result;
     private volatile boolean done = false;
-    private Exception cause;
-    private ResponseCallbackHandler handler;
+    private volatile Exception cause;
+    private volatile ResponseCallbackHandler handler;
 
-    public synchronized void setResult(EasyPackage result) {
+    synchronized public void setResult(EasyPackage result) {
 
         this.result = result;
         done = true;
@@ -19,22 +18,22 @@ public class ResponseFuture {
         notify();
     }
 
-    public synchronized void setCallback(ResponseCallbackHandler handler){
+    public void setCallback(ResponseCallbackHandler handler){
         this.handler = handler;
         if(done){
             handler.onResult(this);
         }
     }
 
-    public synchronized boolean isDone(){
+    public boolean isDone(){
         return done;
     }
 
-    public synchronized boolean isException(){
+    public boolean isException(){
         return cause != null;
     }
 
-    public synchronized void setException(Exception cause) {
+    synchronized public void setException(Exception cause) {
 
         this.cause = cause;
         done = true;
@@ -44,17 +43,18 @@ public class ResponseFuture {
         notify();
     }
 
-    public synchronized Exception getException(){
+    public Exception getException(){
         return cause;
     }
 
-    public synchronized EasyPackage getResult() {
+    synchronized public EasyPackage getResult() {
 
         while(!done){
-            try {
+            try{
                 wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }catch (InterruptedException e){
+                setException(e);
+                return result;
             }
         }
         return result;

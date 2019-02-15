@@ -6,15 +6,48 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WebSocketNotification {
     private static Logger logger = LoggerFactory.getLogger(WebSocketNotification.class);
-    private static HashMap<String,List<ConfigWebSocket>> configConns = new HashMap<>();
-    private static HashMap<String,String> connConfigs = new HashMap<>();
+    private static Map<String,List<ConfigWebSocket>> configConns = new HashMap<>();
+    private static Map<String,String> connConfigs = new HashMap<>();
+    private static Map<String,ConfigWebSocket> sessions = new ConcurrentHashMap<>();
 
+    private static Timer timer = new Timer(true);
+    private static final Long CHECK_LIVE_INTERVAL = 180000L;
+
+    static {
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                logger.info("check connections are living starting");
+                try{
+                    checkConnectionLive();
+                }catch (Exception e){
+                    logger.error(e.getMessage(),e);
+                }
+                logger.info("check connections are living end");
+            }
+        },0,CHECK_LIVE_INTERVAL);
+    }
+
+
+    public static void checkConnectionLive() throws Exception{
+
+        Iterator<Map.Entry<String,ConfigWebSocket>> it = sessions.entrySet().iterator();
+
+        while(it.hasNext()){
+           ConfigWebSocket configWebSocket =  it.next().getValue();
+           if(System.currentTimeMillis() - configWebSocket.getLastActiveTime()> CHECK_LIVE_INTERVAL){
+               logger.error("{} connection heartbeat expired,close it",configWebSocket.getSession().getId());
+               if(configWebSocket.getSession().isOpen()){
+                   configWebSocket.getSession().close();
+               }
+           }
+        }
+    }
 
     public static boolean addConfigConnection(WebSocketSession session) throws Exception{
 
@@ -46,12 +79,21 @@ public class WebSocketNotification {
             configWebSocket.setVersion(version);
             configWebSocket.setSession(session);
             conns.add(configWebSocket);
+            sessions.put(session.getId(),configWebSocket);
             return true;
         }
     }
 
     public static void updateConfigConnection(WebSocketSession session) {
 
+        synchronized (WebSocketNotification.class){
+            ConfigWebSocket configWebSocket = sessions.get(session.getId());
+            if(configWebSocket == null){
+                logger.error("{} connection not found",session.getId());
+                return;
+            }
+            configWebSocket.setLastActiveTime(System.currentTimeMillis());
+        }
     }
 
     public static boolean removeConfigConnection(WebSocketSession session) throws Exception{
@@ -81,6 +123,11 @@ public class WebSocketNotification {
                 if(configWebSocket.getSession().getId() == session.getId()){
                     conns.remove(configWebSocket);
                 }
+            }
+            sessions.remove(session.getId());
+
+            if(session.isOpen()){
+                session.close();
             }
             return true;
         }

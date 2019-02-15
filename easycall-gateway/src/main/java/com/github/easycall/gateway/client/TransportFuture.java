@@ -2,12 +2,12 @@ package com.github.easycall.gateway.client;
 
 public class TransportFuture {
 
-    private TransportPackage result;
+    private volatile TransportPackage result;
     private volatile boolean done = false;
-    private Exception cause;
-    private TransportCallbackHandler handler;
+    private volatile Exception cause;
+    private volatile TransportCallbackHandler handler;
 
-    public synchronized void setResult(TransportPackage result) {
+    synchronized public void setResult(TransportPackage result) {
 
         this.result = result;
         done = true;
@@ -17,22 +17,22 @@ public class TransportFuture {
         notify();
     }
 
-    public synchronized void setCallback(TransportCallbackHandler handler){
+    public void setCallback(TransportCallbackHandler handler){
         this.handler = handler;
         if(done){
             this.handler.onResult(this);
         }
     }
 
-    public synchronized boolean isDone(){
+    public boolean isDone(){
         return done;
     }
 
-    public synchronized boolean isException(){
+    public boolean isException(){
         return cause != null;
     }
 
-    public synchronized void setException(Exception cause) {
+   synchronized public void setException(Exception cause) {
 
         this.cause = cause;
         done = true;
@@ -42,17 +42,18 @@ public class TransportFuture {
         notify();
     }
 
-    public synchronized Exception getException(){
+    public Exception getException(){
         return cause;
     }
 
-    public synchronized TransportPackage getResult() {
+   synchronized public TransportPackage getResult(){
 
         while(!done){
-            try {
+            try{
                 wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }catch (InterruptedException e){
+                setException(e);
+                return result;
             }
         }
         return result;

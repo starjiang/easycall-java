@@ -46,7 +46,7 @@ public class SpringDemo {
         ConfigurableApplicationContext context =  SpringApplication.run(SpringDemo.class, args);
 
         EasyService service = context.getBean(EasyService.class);
-        service.createSync("profile", 8001, SpringDemoWorker.class);
+        service.create("profile", 8001, SpringDemoWorker.class);
         service.startAndWait();
     }
 

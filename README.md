@@ -5,7 +5,7 @@ easycall 是一款java 微服务框架，轻量,高性能，类似dubbo,motan �
 * 完全 scheme free 接口调用,无需定义interface 接口文件
 * 支持跨语言调用python,php,java,c/c++等，凡是支持json/msgpack 序列化的语言都没问题
 * 数据序列化支持 json/msgpack
-* 客户端支持同步，异步调用；服务端同样支持同步，异步模型，可以实现全异步操作，吞吐量大增,支持CompletableFuture组合式异步编程
+* 客户端支持同步，异步调用；服务端同样支持同步，异步模型，可以实现全异步操作，吞吐量大增,支持CompletableFuture组合响应试异步编程
 * 负载均衡支持随机，轮询，随机权重，动态负载，hash 五种负载均衡算法
 * 已经集成配置中心,实现配置动态加载，集中管理
 * 支持熔断机制,方便服务降级，熔断器支持同步，异步模式
@@ -33,9 +33,8 @@ public final class ServiceDemo {
     public static void main(String[] args) throws Exception {
 
     	String zkConnStr = EasyConfig.instance.getString("service.zk","127.0.0.1:2181");
-	EasyService service = new EasyService(zkConnStr);
-    	service.createSync("profile", 8001, SyncDemoWorker.class);//创建一个profile 同步微服务，监听端口8001，业务工作类为SyncDemoWorker
-    	service.createAsync("profileAsync",8002,AsyncDemoWorker.class);//创建一个profileAsync 异步微服务，监听端口8002，业务工作类为AsyncDemoWorker
+	    EasyService service = new EasyService(zkConnStr);
+    	service.create("profile", 8001, DemoWorker.class);//创建一个profile 微服务，监听端口8001，业务工作类为DemoWorker
     	service.startAndWait();
     	
     }
@@ -45,29 +44,53 @@ public final class ServiceDemo {
 具体业务类
 ---------
 ```
-public class SyncDemoWorker {
+public class DemoWorker {
 
-    private Logger log = LoggerFactory.getLogger(SyncDemoWorker.class);
-    /*
-    * 服务的方法通过注解映射到对应方法函数
-    **/
+	private Logger log = LoggerFactory.getLogger(DemoWorker.class);
+    
+    /**
+    * EasyMethod 注解把getProfile 方法映射到onGetProfile 函数
+    * 这是异步方式，返回的是CompletableFuture
+    */
     @EasyMethod(method="getProfile")
-    public void onGetProfile(Request request, Response response) {
-    	log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString()); 	
-    	ObjectNode respBoby = Utils.json.createObjectNode();//返回包体
-    	respBoby.put("msg","ok");
-    	respBoby.put("ret",0);
-    	response.setHead(request.getHead()).setBody(respBoby);
+    public CompletableFuture<Response> onGetProfile(Request request) throws Exception {
+
+		CompletableFuture<Response> completableFuture = new CompletableFuture<>();
+		log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
+
+
+		new Thread(()->{
+
+			ObjectNode respBody = Utils.json.createObjectNode();
+			ObjectNode info =  respBody.putObject("info");
+			info.put("name","hello");
+			info.put("tag","xxxxxxxx");
+			info.put("headPic","http://www.xxxx.com/xxx/xxxx.jpg");
+			info.put("uid",10000);
+
+			try{  Thread.sleep(500); } catch (Exception e){}
+
+			completableFuture.complete(new Response().setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBody));
+		}).start();
+
+    	return completableFuture;
     }
     
+   /**
+    * EasyMethod 注解把getProfile 方法映射到onGetProfile 函数
+    * 这是同步方式，返回的是Response
+    */
     @EasyMethod(method="setProfile")
-    public void onSetProfile(Request request, Response response) {
+    public Response onSetProfile(Request request) {
     	
-    	log.info("req setProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString())
-	ObjectNode respBoby = Utils.json.createObjectNode();
-    	respBoby.put("msg","ok");
-    	respBoby.put("ret",0);
-    	response.setHead(request.getHead()).setBody(respBoby);
+    	//log.info("req setProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
+
+
+		ObjectNode respBody = Utils.json.createObjectNode();
+
+    	respBody.put("msg","ok");
+    	respBody.put("ret",0);
+    	return new Response().setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBody);
     }
 }
 ```

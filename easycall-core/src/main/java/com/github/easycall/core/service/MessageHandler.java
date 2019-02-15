@@ -15,29 +15,42 @@
  */
 package com.github.easycall.core.service;
 
+import com.github.easycall.core.util.EasyPackage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelHandler.Sharable;
-/**
- * Handler implementation for the echo server.
- */
+
+import java.lang.reflect.Method;
+import java.util.Map;
+
 @Sharable
 public class MessageHandler extends ChannelInboundHandlerAdapter {
 
-	private MessageDispatcher dispatcher;
+	private MessageDispatcher syncDispatcher;
+	private MessageDispatcher asyncDispatcher;
+	private Map<String,Method> methodMap;
 	
-	public MessageHandler(MessageDispatcher dispatcher) {
-		this.dispatcher = dispatcher;
+	public MessageHandler(MessageDispatcher syncDispatcher,MessageDispatcher asyncDispatcher,Map<String,Method> methodMap) {
+		this.syncDispatcher = syncDispatcher;
+		this.asyncDispatcher = asyncDispatcher;
+		this.methodMap = methodMap;
 	}
 		
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
     {
-        dispatcher.dispatch(new Message(ctx, msg));
+        EasyPackage pkg = (EasyPackage)msg;
+        Method method = methodMap.get(pkg.getHead().getMethod());
+
+        if (method != null && method.getReturnType().getName().equals("java.util.concurrent.CompletableFuture")){
+            asyncDispatcher.dispatch(new Message(ctx, msg));
+        }else{
+            syncDispatcher.dispatch(new Message(ctx, msg));
+        }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    	dispatcher.dispatch(new Message(ctx, cause));
+    	asyncDispatcher.dispatch(new Message(ctx, cause));
     }
 }

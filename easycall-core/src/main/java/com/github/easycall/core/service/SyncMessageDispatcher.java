@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 
 
@@ -25,7 +26,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
     private ArrayList<Object> workerList;
     private Class<?> clazz;
     private int workType;
-    private HashMap<String, Method> methodMap = new HashMap<String,Method>();
+    private Map<String, Method> methodMap;
     public final static int WORKER_TYPE_HASH = 1;
     public final static int WORKER_TYPE_RANDOM = 2;
 
@@ -35,7 +36,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
         this.threadNum = threadNum;
         this.clazz = clazz;
         this.workType = workType;
-        this.init();
+        this.methodMap = Utils.getMethodMap(clazz);
     }
 
     public void dispatch(Message msg)
@@ -149,15 +150,14 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
         if(msg.getMsg() instanceof EasyPackage)
         {
             try{
-                Response response = new Response();
-
                 EasyPackage reqPkg = (EasyPackage) msg.getMsg();
-
                 Request request = new Request(reqPkg.getFormat(),msg.getCtx().channel().remoteAddress(),msg.getCreateTime(),reqPkg.getHead(),(JsonNode) reqPkg.getBody());
-                response.setFormat(request.getFormat());
-                onRequest(request,response,index);
+                Response response = onRequest(request,index);
+                if(response == null){
+                    throw new EasyException("method "+reqPkg.getHead().getMethod()+" response is null or void");
+                }
                 EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat()).setHead(response.getHead()).setBody(response.getBody());
-                msg.getCtx().writeAndFlush(Unpooled.wrappedBuffer(respPkg.encode()));
+                msg.getCtx().writeAndFlush(respPkg.encode());
 
             }catch (Exception e){
                 onIOException(e);
@@ -176,8 +176,10 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
 
     }
 
-    private void onRequest(Request request, Response response,int index)
+    private Response onRequest(Request request,int index)
     {
+
+
         try
         {
             String callMethod = request.getHead().getMethod();
@@ -189,43 +191,30 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
             Method method = methodMap.get(callMethod);
             if(method == null)
             {
+                Response response = new Response();
                 ObjectNode respBody = Utils.json.createObjectNode();
                 request.getHead().setMsg("method "+callMethod+" not found");
                 request.getHead().setRet(EasyPackage.ERROR_METHOD_NOT_FOUND);
                 response.setHead(request.getHead()).setBody(respBody);
                 log.error("method not found,req={}",request.getHead().toString());
+                return response;
             }
             else
             {
                 Object obj = workerList.get(index);
-                method.invoke(obj, request,response);
+                return (Response) method.invoke(obj,request);
             }
 
         }
         catch (Exception e)
         {
+            Response response = new Response();
             ObjectNode respBody = Utils.json.createObjectNode();
             request.getHead().setMsg(e.getMessage());
             request.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
             response.setHead(request.getHead()).setBody(respBody);
             log.error("req={}",request.getHead().toString(),e);
-
-        }
-
-    }
-
-    private void init()
-    {
-        Method[] methods = clazz.getMethods();
-
-        for(int i=0;i<methods.length;i++)
-        {
-            boolean flag = methods[i].isAnnotationPresent(EasyMethod.class);
-            if(flag)
-            {
-                EasyMethod handler = methods[i].getAnnotation(EasyMethod.class);
-                methodMap.put(handler.method(), methods[i]);
-            }
+            return response;
         }
     }
 

@@ -23,7 +23,7 @@ public class SpringDemoWorker {
 	}
 
     @EasyMethod(method="getProfile")
-    public void onGetProfile(Request request, Response response) {
+    public Response onGetProfile(Request request) {
 
     	log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
@@ -33,11 +33,11 @@ public class SpringDemoWorker {
 		info.put("tag","xxxxxxxx");
 		info.put("headPic","http://www.xxxx.com/xxx/xxxx.jpg");
 		info.put("uid",10000);
-    	response.setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby);
+    	return new Response().setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby);
     }
     
     @EasyMethod(method="setProfile")
-    public void onSetProfile(Request request, Response response) {
+    public Response onSetProfile(Request request) {
     	
     	//log.info("req setProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
@@ -46,7 +46,7 @@ public class SpringDemoWorker {
 
     	respBoby.put("msg","ok");
     	respBoby.put("ret",0);
-    	response.setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby);
+    	return new Response().setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby);
     }
 
 }

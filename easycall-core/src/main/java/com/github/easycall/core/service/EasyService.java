@@ -1,6 +1,7 @@
 package com.github.easycall.core.service;
 
 import com.github.easycall.core.util.DaemonThreadFactory;
+import com.github.easycall.core.util.EasyMethod;
 import com.github.easycall.core.util.PackageFilter;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -14,7 +15,10 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +28,6 @@ public class EasyService {
     private static final Logger log = LoggerFactory.getLogger(EasyService.class);
 	private ArrayList<ServerInfo> serverList = new ArrayList<>();
 	private final static int DEFAULT_ACCEPT_THREAD_NUM = 1;
-	private final static int DEFAULT_EVENT_THREAD_NUM = 8;
     private final static int DEFAULT_WORKER_THREAD_NUM = 100;
     private final static int DEFAULT_WORKER_QUEUE_SIZE = 2000;
 	private final static int DEFAULT_ACCEPT_BACKLOG = 2048;
@@ -66,31 +69,35 @@ public class EasyService {
 		}
 	}
 
+	private Map<String,Method> getMethodMap(Class<?> clazz){
 
-	public void createAsync(String serviceName,int port,int threadNum,int weight,Class<?> clazz) throws Exception
-	{
-		MessageDispatcher dispatcher = new AsyncMessageDispatcher(clazz);
-		ChannelFuture future = createServer(port,DEFAULT_ACCEPT_THREAD_NUM,threadNum,new MessageHandler(dispatcher));
+		Map<String,Method> methodMap = new HashMap<>();
+		Method[] methods = clazz.getMethods();
 
-    	ServerInfo info = new ServerInfo(serviceName, future, port,weight,null);
-    	serverList.add(info);
+		for(int i=0;i<methods.length;i++)
+		{
+			boolean flag = methods[i].isAnnotationPresent(EasyMethod.class);
+			if(flag)
+			{
+				EasyMethod handler = methods[i].getAnnotation(EasyMethod.class);
+				methodMap.put(handler.method(), methods[i]);
+			}
+		}
+		return methodMap;
 	}
 
-    public void createAsync(String serviceName,int port,Class<?> clazz) throws Exception
-    {
-        createAsync(serviceName,port,DEFAULT_EVENT_THREAD_NUM,DEFAULT_WEIGHT,clazz);
-    }
-
-	public void createSync(String serviceName,int port,int threadNum,int queueSize,int weight,int workerType,Class<?> clazz) throws Exception
+	public void create(String serviceName,int port,int threadNum,int queueSize,int weight,int workerType,Class<?> clazz) throws Exception
 	{
-		MessageDispatcher dispatcher = new SyncMessageDispatcher(queueSize,threadNum,workerType,clazz);
-		ChannelFuture future = createServer(port,DEFAULT_ACCEPT_THREAD_NUM,DEFAULT_EVENT_THREAD_NUM,new MessageHandler(dispatcher));
-		ServerInfo info = new ServerInfo(serviceName, future, port,weight,(WorkerPool) dispatcher);
+		MessageDispatcher syncDispatcher = new SyncMessageDispatcher(queueSize,threadNum,workerType,clazz);
+		MessageDispatcher asyncDispatcher = new AsyncMessageDispatcher(clazz);
+		int ioEventThreadNum =  Runtime.getRuntime().availableProcessors() ;
+		ChannelFuture future = createServer(port,DEFAULT_ACCEPT_THREAD_NUM,ioEventThreadNum,new MessageHandler(syncDispatcher,asyncDispatcher,getMethodMap(clazz)));
+		ServerInfo info = new ServerInfo(serviceName, future, port,weight,(WorkerPool) syncDispatcher);
 		serverList.add(info);
 	}
 
-	public void createSync(String serviceName,int port,Class<?> clazz) throws Exception {
-	    createSync(serviceName,port,DEFAULT_WORKER_THREAD_NUM,DEFAULT_WORKER_QUEUE_SIZE,DEFAULT_WEIGHT,WORKER_TYPE_RANDOM,clazz);
+	public void create(String serviceName,int port,Class<?> clazz) throws Exception {
+	    create(serviceName,port,DEFAULT_WORKER_THREAD_NUM,DEFAULT_WORKER_QUEUE_SIZE,DEFAULT_WEIGHT,WORKER_TYPE_RANDOM,clazz);
     }
 
 	public void startAndWait() throws Exception

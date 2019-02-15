@@ -7,10 +7,13 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
+import java.lang.reflect.Method;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class Utils {
@@ -70,5 +73,21 @@ public class Utils {
         hash ^= hash >> 17;
         hash += hash << 5;
         return hash;
+    }
+
+    public static Map<String,Method> getMethodMap(Class<?> clazz){
+        Map<String,Method> methodMap = new HashMap<>();
+        Method[] methods = clazz.getMethods();
+
+        for(int i=0;i<methods.length;i++)
+        {
+            boolean flag = methods[i].isAnnotationPresent(EasyMethod.class);
+            if(flag)
+            {
+                EasyMethod handler = methods[i].getAnnotation(EasyMethod.class);
+                methodMap.put(handler.method(), methods[i]);
+            }
+        }
+        return methodMap;
     }
 }

@@ -57,42 +57,33 @@ public class CircuitBreaker {
     public final static long RESET_TIME = 60000;
 
     private static ConcurrentHashMap<String, CbInfo> infoMap = new ConcurrentHashMap<>();
-    private static HashMap<String, ReentrantLock> lockMap = new HashMap<>();
+    private static HashMap<String, Object> lockMap = new HashMap<>();
 
 
     public static void configure(String cbName, double failRate, double limitRate, long countBase, long failTime, long limitTime, long resetTime) {
 
-        ReentrantLock cbLock;
+        Object cbLock;
         synchronized (CircuitBreaker.class) {
             cbLock = lockMap.get(cbName);
             if (cbLock == null) {
-                cbLock = new ReentrantLock();
+                cbLock = new Object();
                 lockMap.put(cbName, cbLock);
             }
         }
 
-        cbLock.lock();
-
-        CbInfo info;
-        try {
-
+        synchronized (cbLock){
+            CbInfo info;
             info = infoMap.get(cbName);
-
             if (info == null) {
                 info = new CbInfo();
                 infoMap.put(cbName, info);
             }
-
             info.failRate = failRate;
             info.limitRate = limitRate;
             info.countBase = countBase;
             info.failTime = failTime;
             info.limitTime = limitTime;
             info.resetTime = resetTime;
-
-
-        } finally {
-            cbLock.unlock();
         }
     }
 
@@ -100,20 +91,17 @@ public class CircuitBreaker {
 
         long timeNow = System.currentTimeMillis();
 
-        ReentrantLock cbLock;
+        Object cbLock;
         synchronized (CircuitBreaker.class) {
             cbLock = lockMap.get(cbName);
             if (cbLock == null) {
-                cbLock = new ReentrantLock();
+                cbLock = new Object();
                 lockMap.put(cbName, cbLock);
             }
         }
 
-        cbLock.lock();
-
-        CbInfo info;
-        try {
-
+        synchronized (cbLock){
+            CbInfo info;
             info = infoMap.get(cbName);
 
             if (info == null) {
@@ -174,11 +162,9 @@ public class CircuitBreaker {
                 info.invokeCount.set(1);
                 log.info("CircuitBreaker {} reset", cbName);
             }
-        } finally {
-            cbLock.unlock();
+            return true;
         }
 
-        return true;
     }
 
     public static <R> R call(String cbName, UncheckedFunction<R> supplier, UncheckedFunction<R> supplierDefault) throws Exception {

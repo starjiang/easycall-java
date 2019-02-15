@@ -12,9 +12,7 @@ public final class ServiceDemo {
     	String zkConnStr = EasyConfig.instance.getString("service.zk","127.0.0.1:2181");
 
 		EasyService service = new EasyService(zkConnStr);
-    	service.createSync("profile", 8001, SyncDemoWorker.class);
-    	service.createAsync("profileAsync",8002,AsyncDemoWorker.class);
-
+    	service.create("profile", 8001, DemoWorker.class);
     	service.startAndWait();
     	
     }

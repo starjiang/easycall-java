@@ -3,24 +3,28 @@ package com.github.easycall.core.util;
 import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.easycall.core.exception.EasyException;
+import io.netty.util.HashedWheelTimer;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class EasyConfig {
 
-	static Logger logger = LoggerFactory.getLogger(EasyConfig.class);
+	private final static Logger logger = LoggerFactory.getLogger(EasyConfig.class);
 	private final static String CONFIG_PATH="./conf";
 	private final static Integer RECONNECT_INTERVAL = 30000;
-	private final static Long PING_INTERVAL = 90L;
+	private final static Long PING_INTERVAL = 90000L;
 	private final static String CONFIG_HOST="config.easycall.com:8080";
-	private  HashMap<String, String> config = new HashMap<>();
+	private Map<String, String> config = new ConcurrentHashMap<>();
+	private List<EasyConfigReloadHandler> reloadHandlers = new LinkedList<>();
 	public final static EasyConfig instance  = new EasyConfig();
 	private WebSocket webSocket;
+	private Long lastPongTime;
 	private String configName;
 
 	private EasyConfig()
@@ -89,12 +93,27 @@ public class EasyConfig {
 
 	private void subscribeRemoteConfig(){
 
-		OkHttpClient okHttpClient = new OkHttpClient.Builder().callTimeout(5, TimeUnit.SECONDS).pingInterval(PING_INTERVAL,TimeUnit.SECONDS).build();
+		OkHttpClient okHttpClient = new OkHttpClient.Builder().callTimeout(5, TimeUnit.SECONDS).build();
 		Request request = new Request.Builder().url("ws://" + CONFIG_HOST+"/websocket?name="+configName).build();
+		Timer timer = new Timer(true);
 		webSocket = okHttpClient.newWebSocket(request, new WebSocketListener() {
 			@Override
 			public void onOpen(WebSocket webSocket, Response response) {
 				logger.info("config websocket connected");
+				lastPongTime = System.currentTimeMillis();
+
+				//send heartbeat pkg
+				timer.schedule(new TimerTask() {
+					@Override
+					public void run() {
+						if(System.currentTimeMillis() - lastPongTime > 2*PING_INTERVAL){
+							logger.error("not receive heartbeat pkg,close websocket");
+							webSocket.close(1000,"heartbeat interupt");
+							return;
+						}
+						webSocket.send("{\"event\":\"ping\",\"data\":{}}");
+					}
+				}, PING_INTERVAL, PING_INTERVAL);
 				super.onOpen(webSocket, response);
 			}
 
@@ -107,6 +126,18 @@ public class EasyConfig {
 					if (event.equals("configChanged")){
 						logger.info("reloading config......");
 						load();
+
+						Iterator<EasyConfigReloadHandler> it = reloadHandlers.iterator();
+
+						while (it.hasNext()){
+							EasyConfigReloadHandler handler = it.next();
+							if(handler != null){
+								handler.onReload();
+							}
+						}
+					} else if(event.equals("pong")){
+						logger.info("config websocket heartbeat ok");
+						lastPongTime = System.currentTimeMillis();
 					}
 
 				}catch (Exception e){
@@ -123,7 +154,7 @@ public class EasyConfig {
 
 			@Override
 			public void onClosed(WebSocket webSocket, int code, String reason) {
-				logger.error("websocket closed,{} seconds later will reconnect",RECONNECT_INTERVAL);
+				logger.error("websocket closed,{} seconds later,will reconnect",RECONNECT_INTERVAL);
 				try {
 					Thread.sleep(RECONNECT_INTERVAL);
 					subscribeRemoteConfig();
@@ -137,7 +168,7 @@ public class EasyConfig {
 			public void onFailure(WebSocket webSocket, Throwable t, Response response) {
 				logger.error(t.getMessage());
 				try {
-					logger.error("websocket exception,{} seconds later will reconnect",RECONNECT_INTERVAL);
+					logger.error("websocket exception,{} seconds later,will reconnect",RECONNECT_INTERVAL);
 					Thread.sleep(RECONNECT_INTERVAL);
 					subscribeRemoteConfig();
 				}catch (Exception e) {
@@ -293,6 +324,10 @@ public class EasyConfig {
 			logger.error(e.getMessage(),e);
 		}
 
+	}
+
+	public void addReloadHandler(EasyConfigReloadHandler handler){
+		reloadHandlers.add(handler);
 	}
 
 	public boolean hasConfig(String name){
