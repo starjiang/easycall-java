@@ -6,6 +6,10 @@ import com.github.easycall.core.exception.EasyException;
 import com.github.easycall.core.util.EasyMethod;
 import com.github.easycall.core.util.EasyPackage;
 import com.github.easycall.core.util.Utils;
+import io.reactivex.Flowable;
+import io.reactivex.Observable;
+import io.reactivex.Single;
+import io.reactivex.internal.operators.single.SingleCreate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +17,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 public class AsyncMessageDispatcher implements MessageDispatcher{
 
@@ -34,23 +39,58 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
         {
             EasyPackage reqPkg = (EasyPackage) msg.getMsg();
             Request request = new Request(reqPkg.getFormat(),msg.getCtx().channel().remoteAddress(),msg.getCreateTime(),reqPkg.getHead(),(JsonNode) reqPkg.getBody());
+            Object ret = onRequest(request);
 
-            CompletableFuture<Response> completableFuture = onRequest(request);
+            if (ret instanceof CompletableFuture){
 
-            if(completableFuture == null){
-                onIOException(new EasyException("method "+reqPkg.getHead().getMethod()+" response is null or void"));
-                return;
-            }
-
-            completableFuture.thenAccept(response -> {
-                EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat()).setHead(response.getHead()).setBody(response.getBody());
-                try{
-                    msg.getCtx().writeAndFlush(respPkg.encode());
-                }catch (Exception e){
-                    onIOException(e);
+                CompletableFuture<Response> completableFuture = (CompletableFuture<Response>)ret;
+                if(completableFuture == null){
+                    onIOException(new EasyException("method "+reqPkg.getHead().getMethod()+" response is null or void"));
+                    return;
                 }
-            });
+                completableFuture.whenComplete((response,throwable) -> {
+                    if (throwable != null) {
+                        ObjectNode respBody = Utils.json.createObjectNode();
+                        request.getHead().setMsg(throwable.getMessage());
+                        request.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
+                        response = new Response().setHead(request.getHead()).setBody(respBody);
+                        log.error(throwable.getMessage(), throwable);
+                    }
+                    EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat()).setHead(response.getHead()).setBody(response.getBody());
+                    try {
+                        msg.getCtx().writeAndFlush(respPkg.encode());
+                    } catch (Exception e) {
+                        onIOException(e);
+                    }
+                });
 
+            }else if(ret instanceof Single){
+
+                Single<Response> single = (Single<Response>) ret;
+
+                if(single == null){
+                    onIOException(new EasyException("method "+reqPkg.getHead().getMethod()+" response is null or void"));
+                    return;
+                }
+                single.subscribe((response,throwable) -> {
+                    if(throwable != null){
+                        ObjectNode respBody = Utils.json.createObjectNode();
+                        request.getHead().setMsg(throwable.getMessage());
+                        request.getHead().setRet(EasyPackage.ERROR_SERVER_INTERNAL);
+                        response = new Response().setHead(request.getHead()).setBody(respBody);
+                        log.error(throwable.getMessage(),throwable);
+                    }
+                    EasyPackage respPkg = EasyPackage.newInstance().setFormat(reqPkg.getFormat()).setHead(response.getHead()).setBody(response.getBody());
+                    try{
+                        msg.getCtx().writeAndFlush(respPkg.encode());
+                    }catch (Exception e){
+                        onIOException(e);
+                    }
+                });
+
+            }else{
+                log.error("return type not support");
+            }
         }
         else if(msg.getMsg() instanceof Throwable)
         {
@@ -65,7 +105,7 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
 
     }
 
-    private CompletableFuture<Response> onRequest(Request request)
+    private Object onRequest(Request request)
     {
         try
         {
@@ -98,7 +138,7 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
                     }
                 }
 
-                return (CompletableFuture<Response>) method.invoke(obj, request);
+                return method.invoke(obj, request);
             }
 
         }

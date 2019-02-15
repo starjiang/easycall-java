@@ -1,8 +1,8 @@
 package com.github.easycall.core.service;
 
 import com.github.easycall.core.util.DaemonThreadFactory;
-import com.github.easycall.core.util.EasyMethod;
 import com.github.easycall.core.util.PackageFilter;
+import com.github.easycall.core.util.Utils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -16,10 +16,12 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
+import io.reactivex.Flowable;
+import io.reactivex.Observable;
+import io.reactivex.Single;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,21 +71,24 @@ public class EasyService {
 		}
 	}
 
-	private Map<String,Method> getMethodMap(Class<?> clazz){
+	private Map<String,Boolean> getAsyncMethodMap(Class<?> clazz){
 
-		Map<String,Method> methodMap = new HashMap<>();
-		Method[] methods = clazz.getMethods();
 
-		for(int i=0;i<methods.length;i++)
-		{
-			boolean flag = methods[i].isAnnotationPresent(EasyMethod.class);
-			if(flag)
-			{
-				EasyMethod handler = methods[i].getAnnotation(EasyMethod.class);
-				methodMap.put(handler.method(), methods[i]);
+		Map<String,Method> methodMap = Utils.getMethodMap(clazz);
+		Map<String,Boolean> asyncMap = new HashMap<>();
+
+		Iterator<Map.Entry<String,Method>> iterator = methodMap.entrySet().iterator();
+
+		while (iterator.hasNext()){
+			Map.Entry<String,Method> entry = iterator.next();
+			Method method = entry.getValue();
+			if(method.getReturnType().getName().equals(Single.class.getName()) ||
+				method.getReturnType().getName().equals(CompletableFuture.class.getName())){
+				asyncMap.put(entry.getKey(),true);
 			}
 		}
-		return methodMap;
+
+		return asyncMap;
 	}
 
 	public void create(String serviceName,int port,int threadNum,int queueSize,int weight,int workerType,Class<?> clazz) throws Exception
@@ -91,7 +96,7 @@ public class EasyService {
 		MessageDispatcher syncDispatcher = new SyncMessageDispatcher(queueSize,threadNum,workerType,clazz);
 		MessageDispatcher asyncDispatcher = new AsyncMessageDispatcher(clazz);
 		int ioEventThreadNum =  Runtime.getRuntime().availableProcessors() ;
-		ChannelFuture future = createServer(port,DEFAULT_ACCEPT_THREAD_NUM,ioEventThreadNum,new MessageHandler(syncDispatcher,asyncDispatcher,getMethodMap(clazz)));
+		ChannelFuture future = createServer(port,DEFAULT_ACCEPT_THREAD_NUM,ioEventThreadNum,new MessageHandler(syncDispatcher,asyncDispatcher,getAsyncMethodMap(clazz)));
 		ServerInfo info = new ServerInfo(serviceName, future, port,weight,(WorkerPool) syncDispatcher);
 		serverList.add(info);
 	}

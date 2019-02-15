@@ -17,6 +17,7 @@ import com.github.easycall.core.util.PackageFilter;
 import com.github.easycall.core.exception.EasyTimeoutException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
+import io.reactivex.Single;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -395,6 +396,31 @@ public final class EasyClient implements ClientMessageDispatcher {
 
     public CompletableFuture<EasyPackage> asyncCFRequest(int format,EasyHead head,Object body, int timeout){
         return asyncCFRequest(format,head,body,timeout,null,0);
+    }
+
+
+
+    public Single<EasyPackage> asyncRxRequest(int format, EasyHead head, Object body, int timeout, String ip, int port){
+
+        return Single.create(e -> {
+            ResponseFuture future = asyncRequest(format,head,body,timeout,ip,port);
+            future.setCallback((future1)->{
+                if (future1.isException()){
+                    e.onError(future1.getException());
+                }else{
+                    e.onSuccess(future1.getResult());
+                }
+        });});
+    }
+
+    public Single<EasyPackage> asyncRxRequest(int format,EasyHead head,Object body, int timeout){
+        return asyncRxRequest(format,head,body,timeout,null,0);
+    }
+
+    public Single<EasyPackage> asyncRxRequest(String service,String method,Object body, int timeout){
+        EasyHead head = EasyHead.newInstance();
+        head.setService(service).setMethod(method);
+        return asyncRxRequest(EasyPackage.FORMAT_MSGPACK,head,body,timeout);
     }
 
     public ResponseFuture asyncRequest(String service,String method,Object body, int timeout) {
