@@ -4,12 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
-import com.fasterxml.jackson.databind.JsonNode;
 import com.github.easycall.core.exception.EasyException;
-import io.netty.util.HashedWheelTimer;
-import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,15 +12,14 @@ public class EasyConfig {
 
 	private final static Logger logger = LoggerFactory.getLogger(EasyConfig.class);
 	private final static String CONFIG_PATH="./conf";
-	private final static Integer RECONNECT_INTERVAL = 30000;
-	private final static Long PING_INTERVAL = 90000L;
+	private final static Long CHECK_INTERVAL = 60000L;
 	private final static String CONFIG_HOST="config.easycall.com:8080";
 	private Map<String, String> config = new ConcurrentHashMap<>();
 	private List<EasyConfigReloadHandler> reloadHandlers = new LinkedList<>();
 	public final static EasyConfig instance  = new EasyConfig();
-	private WebSocket webSocket;
-	private Long lastPongTime;
 	private String configName;
+	private Integer configVersion = 0;
+	private boolean checkVersion = false;
 
 	private EasyConfig()
 	{
@@ -51,9 +45,10 @@ public class EasyConfig {
 			    return;
             }
 
-            if (webSocket == null){
+            if (!checkVersion){
 				logger.info("subscribe {} config from config center",configName);
-				subscribeRemoteConfig();
+				checkRemoteConfig();
+				checkVersion = true;
 			}
 
 			logger.info("load remote {} config from config center",configName);
@@ -91,92 +86,33 @@ public class EasyConfig {
         logger.info("========================Config Information=========================");
     }
 
-	private void subscribeRemoteConfig(){
-
-		OkHttpClient okHttpClient = new OkHttpClient.Builder().callTimeout(5, TimeUnit.SECONDS).build();
-		Request request = new Request.Builder().url("ws://" + CONFIG_HOST+"/websocket?name="+configName).build();
+	private void checkRemoteConfig(){
 		Timer timer = new Timer(true);
-		webSocket = okHttpClient.newWebSocket(request, new WebSocketListener() {
+
+		timer.schedule(new TimerTask() {
 			@Override
-			public void onOpen(WebSocket webSocket, Response response) {
-				logger.info("config websocket connected");
-				lastPongTime = System.currentTimeMillis();
-
-				//send heartbeat pkg
-				timer.schedule(new TimerTask() {
-					@Override
-					public void run() {
-						if(System.currentTimeMillis() - lastPongTime > 2*PING_INTERVAL){
-							logger.error("not receive heartbeat pkg,close websocket");
-							webSocket.close(1000,"heartbeat interupt");
-							return;
-						}
-						webSocket.send("{\"event\":\"ping\",\"data\":{}}");
-					}
-				}, PING_INTERVAL, PING_INTERVAL);
-				super.onOpen(webSocket, response);
-			}
-
-			@Override
-			public void onMessage(WebSocket webSocket, String text) {
-
+			public void run() {
 				try{
-					JsonNode respPkg = Utils.json.readTree(text);
-					String event = respPkg.get("event").asText();
-					if (event.equals("configChanged")){
-						logger.info("reloading config......");
+					String remoteVersionStr = Utils.getHttpData("http://"+CONFIG_HOST+"/config/version?name="+configName);
+					int remoteVersion  = remoteVersionStr != null ? Integer.valueOf(remoteVersionStr) : 0;
+
+					if(configVersion < remoteVersion){
+						logger.info(configName+" reloading");
 						load();
-
 						Iterator<EasyConfigReloadHandler> it = reloadHandlers.iterator();
-
-						while (it.hasNext()){
+						while(it.hasNext()){
 							EasyConfigReloadHandler handler = it.next();
 							if(handler != null){
 								handler.onReload();
 							}
 						}
-					} else if(event.equals("pong")){
-						logger.info("config websocket heartbeat ok");
-						lastPongTime = System.currentTimeMillis();
 					}
 
 				}catch (Exception e){
-					logger.error(e.getMessage(),e);
+					logger.error("check remote config exception",e);
 				}
-				super.onMessage(webSocket, text);
 			}
-
-			@Override
-			public void onClosing(WebSocket webSocket, int code, String reason) {
-				webSocket.close(1000,"closed by remote");
-				super.onClosing(webSocket, code, reason);
-			}
-
-			@Override
-			public void onClosed(WebSocket webSocket, int code, String reason) {
-				logger.error("websocket closed,{} seconds later,will reconnect",RECONNECT_INTERVAL);
-				try {
-					Thread.sleep(RECONNECT_INTERVAL);
-					subscribeRemoteConfig();
-				}catch (Exception e){
-					logger.error(e.getMessage(),e);
-				}
-				super.onClosed(webSocket, code, reason);
-			}
-
-			@Override
-			public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-				logger.error(t.getMessage());
-				try {
-					logger.error("websocket exception,{} seconds later,will reconnect",RECONNECT_INTERVAL);
-					Thread.sleep(RECONNECT_INTERVAL);
-					subscribeRemoteConfig();
-				}catch (Exception e) {
-					logger.error(e.getMessage(), e);
-				}
-				super.onFailure(webSocket, t, response);
-			}
-		});
+		}, CHECK_INTERVAL, CHECK_INTERVAL);
     }
 
 	private void loadFileConfig(InputStream in)
@@ -302,7 +238,7 @@ public class EasyConfig {
 				int remoteVersion = 0;
 				String remoteVersionStr = Utils.getHttpData("http://"+CONFIG_HOST+"/config/version?name="+configName);
 				remoteVersion = remoteVersionStr != null ? Integer.valueOf(remoteVersionStr) : 0;
-
+				configVersion = remoteVersion;
 				if (localVersion < remoteVersion) {
 
 					String remoteDataStr = Utils.getHttpData("http://"+CONFIG_HOST+"/config/info?name="+configName);
@@ -310,6 +246,8 @@ public class EasyConfig {
 					if(loadSuccess){
 						writeFileData(versionPath,remoteVersionStr.getBytes());
 					}
+
+					logger.info("config update form version {} to {}",localVersion,remoteVersion);
 				}
 			}catch (Exception e){
 				logger.error(e.getMessage());

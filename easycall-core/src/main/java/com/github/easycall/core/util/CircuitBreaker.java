@@ -1,13 +1,10 @@
 package com.github.easycall.core.util;
-import io.reactivex.Single;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 class CbInfo{
 
@@ -202,22 +199,5 @@ public class CircuitBreaker {
         });
 
         return future;
-    }
-
-    public static <T> Single<T> asyncRxCall(String cbName, UncheckedFunction<Single<T>> supplier, UncheckedFunction<Single<T>> supplierDefault) throws Exception {
-
-        if(!checkStatus(cbName)){
-            return supplierDefault.apply();
-        }
-
-        CbInfo info = infoMap.get(cbName);
-        info.invokeCount.incrementAndGet();
-
-        Single<T> single = supplier.apply();
-        return single.doOnEvent((t, e) -> {
-            if(e != null){
-                info.failCount.incrementAndGet();
-            }
-        });
     }
 }

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.config.dao.ConfigDao;
 import com.github.easycall.config.dao.entities.Config;
 import com.github.easycall.config.utils.Utils;
-import com.github.easycall.config.websocket.WebSocketNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import sun.rmi.runtime.Log;
 
 import java.util.Date;
 import java.util.List;
@@ -110,9 +108,6 @@ public class ConfigController {
 
         config.setVersion(Long.valueOf(version));
         configDao.updateVersion(config);
-
-        WebSocketNotification.notifyConfigChanged(name,Long.valueOf(version));
-
         return ResponseEntity.ok(respBody);
     }
 

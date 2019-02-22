@@ -62,7 +62,6 @@ public class NodeManager {
 		}
 		
 		ArrayList<Node> nodeList = new ArrayList<>();
-
 		HashSet<String> set = new HashSet<>();
 		for(int i=0;i<list.size();i++)
 		{
@@ -113,18 +112,13 @@ public class NodeManager {
 			 	}
 				else
 				{
-					client.subscribeChildChanges(name, new IZkChildListener() {
-
-						public void handleChildChange(String parentPath,List<String> currentChildren) throws Exception
-						{
-							logger.info(parentPath+" changes reload");
-							getNodesFromZk(parentPath);
-						}
-					});
+					client.subscribeChildChanges(name, (parentPath, currentChildren) -> {
+                        logger.info(parentPath+" changes reload");
+                        getNodesFromZk(parentPath);
+                    });
 				}
 			}
 		}
-
 
 		if(loadBalanceType == LoadBalance.LB_ACTIVE){
 			ActiveLoadBalance activeLoadBalance = new ActiveLoadBalance();
@@ -146,6 +140,7 @@ public class NodeManager {
         }else if(loadBalanceType == LoadBalance.LB_ROUND_ROBIN){
 			RoundRobinLoadBalance roundRobinLoadBalance = new RoundRobinLoadBalance();
             roundRobinLoadBalance.setNodeList(list);
+            roundRobinLoadBalance.setName(name);
             return roundRobinLoadBalance.getNode();
         }else {
 		    throw new EasyException("invalid loadbalance type");

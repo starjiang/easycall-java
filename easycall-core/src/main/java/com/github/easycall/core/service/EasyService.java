@@ -18,10 +18,6 @@ import io.netty.handler.logging.LoggingHandler;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-
-import io.reactivex.Flowable;
-import io.reactivex.Observable;
-import io.reactivex.Single;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,8 +78,7 @@ public class EasyService {
 		while (iterator.hasNext()){
 			Map.Entry<String,Method> entry = iterator.next();
 			Method method = entry.getValue();
-			if(method.getReturnType().getName().equals(Single.class.getName()) ||
-				method.getReturnType().getName().equals(CompletableFuture.class.getName())){
+			if(method.getReturnType().getName().equals(CompletableFuture.class.getName())){
 				asyncMap.put(entry.getKey(),true);
 			}
 		}

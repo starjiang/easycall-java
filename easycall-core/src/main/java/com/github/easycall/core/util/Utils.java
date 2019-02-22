@@ -2,19 +2,13 @@ package com.github.easycall.core.util;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
-
+import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
+import java.net.*;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class Utils {
 
@@ -27,18 +21,32 @@ public class Utils {
         Utils.msgpack.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-
     public static String getHttpData(String url) throws Exception{
 
-        OkHttpClient okHttpClient = new OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS).build();
-        Request request = new Request.Builder().url(url).build();
-        Response response = okHttpClient.newCall(request).execute();
-        if (response.isSuccessful()) {
-            return response.body().string();
-        }else {
-            throw new Exception(url+",status="+response.code());
+        HttpURLConnection httpURLConnection = (HttpURLConnection)new URL(url).openConnection();
+        InputStream inputStream = httpURLConnection.getInputStream();
+        StringBuffer resultBuffer = new StringBuffer();
+
+        if (httpURLConnection.getResponseCode() >= 300) {
+            throw new Exception("http exception,code=" + httpURLConnection.getResponseCode()+",msg="+httpURLConnection.getResponseMessage());
         }
+
+        try {
+            byte [] buffer = new byte[4096];
+            while(true){
+                int n = inputStream.read(buffer);
+                resultBuffer.append(new String(buffer,0,n));
+                if(n < 4096) break;
+            }
+
+        } finally {
+            if (inputStream != null) {
+                inputStream.close();
+            }
+        }
+        return resultBuffer.toString();
     }
+
 
     public static String getLocalIp() throws Exception {
         String ip = Inet4Address.getLocalHost().getHostAddress();
@@ -46,12 +54,11 @@ public class Utils {
             return ip;
         } else {
             Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
-
             while (en.hasMoreElements()) {
-                NetworkInterface intf = en.nextElement();
-                Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses();
-                while (enumIpAddr.hasMoreElements()) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
+                NetworkInterface networkInterface = en.nextElement();
+                Enumeration<InetAddress> enumIpAddress = networkInterface.getInetAddresses();
+                while (enumIpAddress.hasMoreElements()) {
+                    InetAddress inetAddress = enumIpAddress.nextElement();
                     if (!inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress() &&
                             inetAddress.isSiteLocalAddress()) {
                         return inetAddress.getHostAddress();

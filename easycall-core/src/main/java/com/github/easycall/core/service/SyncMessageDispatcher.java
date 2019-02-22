@@ -178,8 +178,6 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
 
     private Response onRequest(Request request,int index)
     {
-
-
         try
         {
             String callMethod = request.getHead().getMethod();
