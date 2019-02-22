@@ -10,9 +10,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
-public class DemoWorker {
+public class DemoService {
 
-	private Logger log = LoggerFactory.getLogger(DemoWorker.class);
+	private Logger log = LoggerFactory.getLogger(DemoService.class);
     
     @EasyMethod(method="getIpInfo")
     public CompletableFuture<Response> getIpInfo(Request request) throws Exception {

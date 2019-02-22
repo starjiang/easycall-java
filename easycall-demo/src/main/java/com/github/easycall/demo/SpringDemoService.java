@@ -8,19 +8,16 @@ import com.github.easycall.core.util.EasyMethod;
 import com.github.easycall.core.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-/**
- * worker instance create by easycall self,so spring can't inject for it,we need to use SpringContextUtil
- */
-public class SpringDemoWorker {
+@Component
+public class SpringDemoService {
 
-	private Logger log = LoggerFactory.getLogger(SpringDemoWorker.class);
+	private Logger log = LoggerFactory.getLogger(SpringDemoService.class);
 
+	@Autowired
 	private EasyClient client;
-
-	public SpringDemoWorker(){
-		client = SpringContextUtil.getBean(EasyClient.class);
-	}
 
     @EasyMethod(method="getProfile")
     public Response onGetProfile(Request request) {
@@ -41,9 +38,7 @@ public class SpringDemoWorker {
     	
     	//log.info("req setProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
-
 		ObjectNode respBoby = Utils.json.createObjectNode();
-
     	respBoby.put("msg","ok");
     	respBoby.put("ret",0);
     	return new Response().setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby);

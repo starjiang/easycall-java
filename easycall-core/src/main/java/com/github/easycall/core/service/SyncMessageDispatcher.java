@@ -3,16 +3,12 @@ package com.github.easycall.core.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.core.exception.EasyException;
-import com.github.easycall.core.util.EasyMethod;
 import com.github.easycall.core.util.EasyPackage;
 import com.github.easycall.core.util.Utils;
-import io.netty.buffer.Unpooled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -23,20 +19,19 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
     private int threadNum;
     private ArrayList<WorkerThread> threadList;
     private ArrayList<ArrayBlockingQueue<Object>> queueList;
-    private ArrayList<Object> workerList;
-    private Class<?> clazz;
+    private Object service;
     private int workType;
     private Map<String, Method> methodMap;
     public final static int WORKER_TYPE_HASH = 1;
     public final static int WORKER_TYPE_RANDOM = 2;
 
-    public SyncMessageDispatcher(int queueSize,int threadNum,int workType,Class<?> clazz)
+    public SyncMessageDispatcher(int queueSize,int threadNum,int workType,Object service)
     {
         this.queueSize = queueSize;
         this.threadNum = threadNum;
-        this.clazz = clazz;
+        this.service = service;
         this.workType = workType;
-        this.methodMap = Utils.getMethodMap(clazz);
+        this.methodMap = Utils.getMethodMap(service.getClass());
     }
 
     public void dispatch(Message msg)
@@ -117,13 +112,6 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
             }
         }
 
-        workerList = new ArrayList<>();
-
-        for(int i=0;i<threadNum;i++){
-            Object worker = clazz.newInstance();
-            workerList.add(worker);
-        }
-
         threadList = new ArrayList<>();
         for(int i=0;i<threadNum;i++)
         {
@@ -199,8 +187,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
             }
             else
             {
-                Object obj = workerList.get(index);
-                return (Response) method.invoke(obj,request);
+                return (Response) method.invoke(service,request);
             }
 
         }

@@ -7,14 +7,14 @@ import com.github.easycall.core.util.EasyConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.boot.SpringApplication;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 @ComponentScan(value="com.github.easycall.demo")
 @Configuration
-public class SpringDemo {
+public class SpringDemoApplication {
 
     @Value("${service.zk}")
     private String zkConnStr;
@@ -43,10 +43,10 @@ public class SpringDemo {
 
     public static void main(String[] args) throws Exception {
 
-        ConfigurableApplicationContext context =  SpringApplication.run(SpringDemo.class, args);
+        ApplicationContext context =  SpringApplication.run(SpringDemoApplication.class, args);
 
         EasyService service = context.getBean(EasyService.class);
-        service.create("profile", 8001, SpringDemoWorker.class);
+        service.create("profile", 8001,context.getBean(SpringDemoService.class));
         service.startAndWait();
     }
 

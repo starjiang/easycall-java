@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -17,14 +16,12 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
 
     private static Logger log = LoggerFactory.getLogger(AsyncMessageDispatcher.class);
     private Map<String, Method> methodMap;
-    private Map<Long,Object> objMap;
-    private Class<?> clazz;
+    private Object service;
 
 
-    public AsyncMessageDispatcher(Class<?> clazz) {
-        this.clazz = clazz;
-        this.objMap = new HashMap<>();
-        this.methodMap = Utils.getMethodMap(clazz);
+    public AsyncMessageDispatcher(Object service) {
+        this.service = service;
+        this.methodMap = Utils.getMethodMap(service.getClass());
     }
 
     public void dispatch(Message msg)
@@ -99,17 +96,7 @@ public class AsyncMessageDispatcher implements MessageDispatcher{
             }
             else
             {
-                Object obj;
-
-                synchronized (this){
-                    obj = objMap.get(Thread.currentThread().getId());
-                    if (obj == null) {
-                        obj = clazz.newInstance();
-                        objMap.put(Thread.currentThread().getId(),obj);
-                    }
-                }
-
-                return method.invoke(obj, request);
+                return method.invoke(service, request);
             }
 
         }
