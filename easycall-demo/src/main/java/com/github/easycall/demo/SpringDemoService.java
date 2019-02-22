@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
+
 @Component
 public class SpringDemoService {
 
@@ -22,7 +24,7 @@ public class SpringDemoService {
     @EasyMethod(method="getProfile")
     public Response onGetProfile(Request request) {
 
-    	log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
+    	//log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
     	ObjectNode respBoby = Utils.json.createObjectNode();
     	ObjectNode info =  respBoby.putObject("info");
@@ -34,14 +36,16 @@ public class SpringDemoService {
     }
     
     @EasyMethod(method="setProfile")
-    public Response onSetProfile(Request request) {
+    public CompletableFuture<Response> onSetProfile(Request request) {
     	
     	//log.info("req setProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
 		ObjectNode respBoby = Utils.json.createObjectNode();
     	respBoby.put("msg","ok");
     	respBoby.put("ret",0);
-    	return new Response().setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBoby);
+    	CompletableFuture<Response> completableFuture = new CompletableFuture<>();
+		completableFuture.complete( new Response().setHead(request.getHead()).setBody(respBoby));
+    	return completableFuture;
     }
 
 }

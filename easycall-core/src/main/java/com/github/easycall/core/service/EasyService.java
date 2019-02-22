@@ -30,8 +30,6 @@ public class EasyService {
 	private final static int DEFAULT_WORKER_QUEUE_SIZE = 2000;
 	private final static int DEFAULT_ACCEPT_BACKLOG = 2048;
 	private final static int DEFAULT_WEIGHT = 100;
-	public final static int WORKER_TYPE_HASH = 1;
-	public final static int WORKER_TYPE_RANDOM = 2;
 
 	private ServiceRegister serviceRegister;
 
@@ -86,9 +84,9 @@ public class EasyService {
 		return asyncMap;
 	}
 
-	public void create(String serviceName,int port,int threadNum,int queueSize,int weight,int workerType,Object service) throws Exception
+	public void create(String serviceName,int port,int threadNum,int queueSize,int weight,Object service) throws Exception
 	{
-		MessageDispatcher syncDispatcher = new SyncMessageDispatcher(queueSize,threadNum,workerType,service);
+		MessageDispatcher syncDispatcher = new SyncMessageDispatcher(queueSize,threadNum,service);
 		MessageDispatcher asyncDispatcher = new AsyncMessageDispatcher(service);
 		int ioEventThreadNum =  Runtime.getRuntime().availableProcessors() ;
 		ChannelFuture future = createServer(port,DEFAULT_ACCEPT_THREAD_NUM,ioEventThreadNum,new MessageHandler(syncDispatcher,asyncDispatcher,getAsyncMethodMap(service.getClass())));
@@ -97,7 +95,7 @@ public class EasyService {
 	}
 
 	public void create(String serviceName,int port,Object worker) throws Exception {
-		create(serviceName,port,DEFAULT_WORKER_THREAD_NUM,DEFAULT_WORKER_QUEUE_SIZE,DEFAULT_WEIGHT,WORKER_TYPE_RANDOM,worker);
+		create(serviceName,port,DEFAULT_WORKER_THREAD_NUM,DEFAULT_WORKER_QUEUE_SIZE,DEFAULT_WEIGHT,worker);
 	}
 
 	public void startAndWait() throws Exception

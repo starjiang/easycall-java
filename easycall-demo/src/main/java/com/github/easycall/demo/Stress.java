@@ -26,7 +26,7 @@ class Task implements Runnable
 		{
 			ObjectNode reqBody = Utils.json.createObjectNode();
 			
-			client.syncRequest("profile","GetProfile", reqBody,2000);
+			client.syncRequest("profile","setProfile", reqBody,1000);
 			int count = currCount.getAndAdd(1);
 			if(count % 10000 == 0)
 			{
@@ -60,7 +60,7 @@ public class Stress {
 		int poolSize = Integer.parseInt(args[2]);
 		
 		ExecutorService pool = Executors.newFixedThreadPool(poolSize);
-		EasyClient client = new EasyClient(zkConnStr, 4, LoadBalance.LB_ACTIVE);
+		EasyClient client = new EasyClient(zkConnStr, 8, LoadBalance.LB_ACTIVE);
 		
 		long start = System.currentTimeMillis();
 

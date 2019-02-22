@@ -109,7 +109,7 @@ public class EasyConfig {
 					}
 
 				}catch (Exception e){
-					logger.error("check remote config exception",e);
+					logger.error("check remote config exception:"+e.getMessage());
 				}
 			}
 		}, CHECK_INTERVAL, CHECK_INTERVAL);

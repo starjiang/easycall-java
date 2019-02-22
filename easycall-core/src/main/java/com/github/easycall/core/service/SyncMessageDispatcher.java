@@ -21,95 +21,97 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
     private ArrayList<ArrayBlockingQueue<Object>> queueList;
     private Object service;
     private int workType;
+    private int seq;
     private Map<String, Method> methodMap;
-    public final static int WORKER_TYPE_HASH = 1;
-    public final static int WORKER_TYPE_RANDOM = 2;
 
-    public SyncMessageDispatcher(int queueSize,int threadNum,int workType,Object service)
+    public SyncMessageDispatcher(int queueSize,int threadNum,Object service)
     {
+        this.seq = 0;
         this.queueSize = queueSize;
         this.threadNum = threadNum;
         this.service = service;
-        this.workType = workType;
         this.methodMap = Utils.getMethodMap(service.getClass());
     }
 
+    @Override
     public void dispatch(Message msg)
     {
-        if (workType == WORKER_TYPE_HASH){
-
-            int routeHash = 0;
-            if(msg.getMsg() instanceof EasyPackage){
-                EasyPackage pkg = (EasyPackage)msg.getMsg();
-                String routeKey = pkg.getHead().getRouteKey() == null ? "" : pkg.getHead().getRouteKey();
-                routeHash = Utils.hash(routeKey);
+        int routeHash = 0;
+        if(msg.getMsg() instanceof EasyPackage){
+            EasyPackage pkg = (EasyPackage)msg.getMsg();
+            if(pkg.getHead().getRouteKey() != null && !pkg.getHead().getRouteKey().equals("")){
+                routeHash = Utils.hash(pkg.getHead().getRouteKey());
+            }else{
+                routeHash = seq++;
             }
-            int index = routeHash % threadList.size();
-            boolean success = queueList.get(index).offer(msg);
-            if(!success){
-                log.error("work queue {} is full,throw away request",index);
+        }
+        int index = routeHash % threadList.size();
+        boolean full = true;
+        if(!queueList.get(index).offer(msg)){
+            for(int i=0;i<queueList.size();i++){
+                if(queueList.get(i).remainingCapacity() != 0){
+                    if(queueList.get(i).offer(msg)){
+                        full = false;
+                        break;
+                    }
+                }
             }
-
-        }else if (workType == WORKER_TYPE_RANDOM) {
-            boolean success = queueList.get(0).offer(msg);
-            if(!success){
-                log.error("work queue is full,throw away request");
-            }
-        } else{
-            log.error("workType not support");
+        }else{
+            full = false;
         }
 
+        if(full){
+            log.error("work queue is full,throw away request");
+        }
     }
 
+    @Override
     public Message consume(int index) throws Exception {
-        if (workType == WORKER_TYPE_HASH){
-            return (Message) queueList.get(index).take();
-        }else if(workType == WORKER_TYPE_RANDOM){
-            return (Message) queueList.get(0).take();
-        }else {
-            throw new EasyException("workType not support");
+        if(queueList.get(index).isEmpty()){
+            for(int i=0;i<queueList.size();i++) {
+                if (!queueList.get(i).isEmpty()) {
+                    Object msg = queueList.get(i).peek();
+                    if (msg != null && msg instanceof Message) {
+                        EasyPackage pkg = (EasyPackage) ((Message) msg).getMsg();
+                        if (pkg.getHead().getRouteKey() == null || pkg.getHead().getRouteKey().equals("")) {
+                            return (Message) queueList.get(i).take();
+                        }
+                    }
+                }
+            }
         }
+        return (Message) queueList.get(index).take();
     }
 
+    @Override
     public int getMaxQueueSize()
     {
         return queueSize;
     }
 
+    @Override
     public int getQueueSize(){
 
-        if (workType == WORKER_TYPE_HASH){
-            int size = 0;
-            for(int i=0;i<queueList.size();i++){
-                size+= queueList.get(i).size();
-            }
-            return size;
-
-        }else if(workType == WORKER_TYPE_RANDOM){
-            return queueList.get(0).size();
-        }else {
-            return 0;
+        int size = 0;
+        for(int i=0;i<queueList.size();i++){
+            size+= queueList.get(i).size();
         }
+        return size;
     }
 
+    @Override
     public void start() throws Exception
     {
-        if(threadList != null) return;
+        if(threadList != null) throw new EasyException("threadpool has been start");
+        if(threadNum == 0) throw new EasyException("threadNum must >0");
 
-        int size = queueSize;
-
-        if(workType == WORKER_TYPE_HASH){
-            size = queueSize / threadNum;
-        }
+        int size = queueSize / threadNum;
 
         queueList = new ArrayList<>();
         for(int i=0;i<threadNum;i++)
         {
             ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<>(size);
             queueList.add(queue);
-            if(workType == WORKER_TYPE_RANDOM){
-                break;
-            }
         }
 
         threadList = new ArrayList<>();
@@ -122,6 +124,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
 
     }
 
+    @Override
     public void stop()
     {
         if(threadList == null) return;
@@ -132,7 +135,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
         }
     }
 
-
+    @Override
     public void onMessage(Message msg,int index)
     {
         if(msg.getMsg() instanceof EasyPackage)
@@ -140,7 +143,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
             try{
                 EasyPackage reqPkg = (EasyPackage) msg.getMsg();
                 Request request = new Request(reqPkg.getFormat(),msg.getCtx().channel().remoteAddress(),msg.getCreateTime(),reqPkg.getHead(),(JsonNode) reqPkg.getBody());
-                Response response = onRequest(request,index);
+                Response response = onRequest(request);
                 if(response == null){
                     throw new EasyException("method "+reqPkg.getHead().getMethod()+" response is null or void");
                 }
@@ -164,7 +167,7 @@ public class SyncMessageDispatcher implements WorkerPool,MessageDispatcher {
 
     }
 
-    private Response onRequest(Request request,int index)
+    private Response onRequest(Request request)
     {
         try
         {
