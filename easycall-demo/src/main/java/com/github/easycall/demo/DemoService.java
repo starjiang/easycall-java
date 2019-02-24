@@ -1,4 +1,5 @@
 package com.github.easycall.demo;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.easycall.core.service.Request;
 import com.github.easycall.core.service.Response;
@@ -17,20 +18,20 @@ public class DemoService {
     @EasyMethod(method="getIpInfo")
     public CompletableFuture<Response> getIpInfo(Request request) throws Exception {
 
-		CompletableFuture<Response> completableFuture = new CompletableFuture<>();
 		log.info("head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
-		WebClient client = WebClient.create(VertxUtils.vertx);
-		ObjectNode respBody = Utils.json.createObjectNode();
+		return getIpDataByHttp(request.getBody().get("ip").asText()).thenApply(new Response().setHead(request.getHead())::setBody);
+    }
 
-		client.get("ip-api.com","/json/"+request.getBody().get("ip").asText()).send(result -> {
+    private CompletableFuture<JsonNode> getIpDataByHttp(String ip){
+
+		CompletableFuture<JsonNode> completableFuture = new CompletableFuture<>();
+		WebClient client = WebClient.create(VertxUtils.vertx);
+		client.get("ip-api.com","/json/"+ip).send(result -> {
 			try{
 				if(result.succeeded()){
-					log.info(result.result().bodyAsString());
-					respBody.put("data",Utils.json.readTree(result.result().bodyAsString()));
-					completableFuture.complete(new Response().setHead(request.getHead().setRet(0).setMsg("ok")).setBody(respBody));
+					completableFuture.complete(Utils.json.readTree(result.result().bodyAsString()));
 				}else{
-					log.error(result.cause().getMessage(),result.cause());
 					completableFuture.completeExceptionally(result.cause());
 				}
 			}catch(Exception e){
@@ -38,8 +39,8 @@ public class DemoService {
 			}
 		});
 
-    	return completableFuture;
-    }
+		return completableFuture;
+	}
 
 	@EasyMethod(method="setProfile")
     public Response onSetProfile(Request request) {
