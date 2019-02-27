@@ -143,9 +143,10 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
             Entry<String,String> en = it.next();
             String key = en.getKey();
             if (key.startsWith("X-Easycall-")) {
-                String keySuffix = key.substring(12);
-                String keyPrefix = key.substring(11,12);
-                String fieldName = keyPrefix.toLowerCase()+keySuffix;
+
+                String fieldName = key.substring(11);
+                logger.info(fieldName);
+
                 Field field = fields.get(fieldName);
                 if(field == null){
                     continue;
@@ -180,8 +181,8 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
             try {
                 if (future.isException()) {
                     Map<String,String> headers = new HashMap<>();
-                    headers.put("X-Easycall-Ret",String.valueOf(EasyPackage.ERROR_SERVER_INTERNAL));
-                    headers.put("X-Easycall-Msg",future.getException().getMessage());
+                    headers.put("X-Easycall-ret",String.valueOf(EasyPackage.ERROR_SERVER_INTERNAL));
+                    headers.put("X-Easycall-msg",future.getException().getMessage());
                     ByteBuf respBuf = Unpooled.wrappedBuffer(future.getException().getMessage().getBytes());
                     respData(ctx, respBuf,INTERNAL_SERVER_ERROR, keepAlive, "text/plain",headers);
                     logger.error(future.getException().getMessage(),future.getException());
@@ -191,8 +192,8 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
                     String msg = respPkg.getHead().getMsg() == null ? "ok" : respPkg.getHead().getMsg();
 
                     Map<String,String> headers = new HashMap<>();
-                    headers.put("X-Easycall-Ret",String.valueOf(ret));
-                    headers.put("X-Easycall-Msg",msg);
+                    headers.put("X-Easycall-ret",String.valueOf(ret));
+                    headers.put("X-Easycall-msg",msg);
 
                     ByteBuf respBuf = respPkg.getBody();
                     HttpResponseStatus status = OK;

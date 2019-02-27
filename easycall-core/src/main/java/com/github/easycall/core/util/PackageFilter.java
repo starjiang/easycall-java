@@ -6,10 +6,13 @@ import com.github.easycall.core.exception.EasyInvalidPkgException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class PackageFilter extends ByteToMessageDecoder {
-	
+	private static Logger logger = LoggerFactory.getLogger(PackageFilter.class);
+
 	@Override
 	protected void decode(ChannelHandlerContext ctx, ByteBuf buf,List<Object> out) throws Exception 
 	{
@@ -52,6 +55,7 @@ public class PackageFilter extends ByteToMessageDecoder {
 			stx = buf.getByte(offset);
 			if(stx != EasyPackage.STX )
 			{
+				logger.info("invalid stx1");
 				return -2;
 			}
 			return -1;
@@ -61,12 +65,14 @@ public class PackageFilter extends ByteToMessageDecoder {
 		
 		if(stx != EasyPackage.STX)
 		{
+			logger.info("invalid stx2");
 			return -2;
 		}
 
 		byte format = buf.getByte(offset+1);
 
 		if (format!= EasyPackage.FORMAT_MSGPACK && format!= EasyPackage.FORMAT_JSON){
+			logger.info("invalid format");
 			return -2;
 		}
 
@@ -74,6 +80,7 @@ public class PackageFilter extends ByteToMessageDecoder {
 		
 		if(headlen > EasyPackage.HEAD_MAX_LEN)
 		{
+			logger.info("invalid headlen,len={}",headlen);
 			return -2;
 		}
 
@@ -81,6 +88,7 @@ public class PackageFilter extends ByteToMessageDecoder {
 
 		if(bodylen > EasyPackage.BODY_MAX_LEN)
 		{
+			logger.info("invalid bodylen");
 			return -2;
 		}
 		
@@ -89,6 +97,7 @@ public class PackageFilter extends ByteToMessageDecoder {
 			byte etx = buf.getByte(offset+headlen+bodylen+10);
 			if(etx != EasyPackage.ETX)
 			{
+				logger.info("invalid etx");
 				return -2;
 			}
 			return headlen+bodylen+11;

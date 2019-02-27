@@ -24,7 +24,7 @@ public class SpringDemoService {
     @EasyMethod(method="getProfile")
     public Response onGetProfile(Request request) {
 
-    	//log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
+    	log.info("req getProfile head=[{}],body=[{}]",request.getHead().toString(),request.getBody().toString());
 
     	ObjectNode respBoby = Utils.json.createObjectNode();
     	ObjectNode info =  respBoby.putObject("info");
