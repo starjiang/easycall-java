@@ -6,21 +6,32 @@ local node_mgr = require("easycall.node_mgr")
 local _M = {}
 local mt = { __index = _M }
 
-function _M.new(self,zklist,pool_size,timeout)
-  local nm = node_mgr:new({serv_list=zklist,timeout=2000})
+_M.max_idle_time = 1800*1000
+_M.max_head_len = 2 * 1024 * 1024
+_M.max_body_len = 2 * 1024 * 1024
+_M.format_json = 1
+_M.format_msgpack = 0
+_M.code_server_err = 1002
+
+function _M.new(self,zklist,pool_size,timeout,lb_type)
+  local nm = node_mgr:new({serv_list=zklist,timeout=timeout})
   local obj = {
     nm = nm,
     pool_size = pool_size,
-    timeout = timeout
+    timeout = timeout,
+    lb_type = lb_type
   }
   return setmetatable(obj, mt),nil
 end
 
 function _M.request(self,format,head,body_data)
-  
-  local node,err = node_mgr.get_node(self.nm,head.service)
+  local lb_type = self.lb_type
+  if head['routeKey'] then
+    lb_type = node_mgr.lb_type_hash
+  end
+  local node,err = node_mgr.get_node(self.nm,head['service'],lb_type,head['routeKey'])
   if not node then
-    return nil,err
+    return nil,nil,nil,err
   end
   local sock = ngx.socket.tcp()
   sock:settimeout(self.timeout)
@@ -80,7 +91,7 @@ function _M.request(self,format,head,body_data)
     sock:close()
     return nil,nil,nil,"pkg:invalid stx"
   end
-  if head_len > 2*1024*1024 or body_len > 2*1024*1024 then
+  if head_len > self.max_head_len or body_len > self.max_body_len then
     sock:close()
     return nil,nil,nil,"pkg:invalid headlen or bodylen"
   end
@@ -112,7 +123,7 @@ function _M.request(self,format,head,body_data)
   else
     head = cjson.decode(head_data)
   end
-  sock:setkeepalive(1800*1000,self.pool_size)
+  sock:setkeepalive(self.max_idle_time,self.pool_size)
   return format,head,body_data,nil
 end
 

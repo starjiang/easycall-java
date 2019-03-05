@@ -36,18 +36,19 @@ function _M.connect(self)
             return conn,nil
         end
     end
-    return nil,"no server available"
+    return nil,"no zk server available"
 end
 
 function _M.get_children(self, path)
     local conn = self.conn
+    local err = ""
     if not conn then
-        conn = self:connect()
+        conn,err = self:connect()
         if not conn then
-            return nil, "connect error"
+            self.conn = nil
+            return nil, err
         end
     end
-
     local res, err = conn:get_children(path)
     if not res then
         conn:close()
@@ -59,10 +60,12 @@ end
 
 function _M.get_data(self, path)
     local conn = self.conn
+    local err = ''
     if not conn then
-        conn = self:connect()
+        conn,err = self:connect()
         if not conn then
-            return nil, "connect error"
+            self.conn = nil
+            return nil, err
         end
     end
     local res, err = conn:get_data(path)
@@ -76,7 +79,7 @@ end
 
 function _M.close(self)
     local conn = self.conn
-    if not conn then
+    if conn then
         self.conn:close()
         self.conn = nil
     end

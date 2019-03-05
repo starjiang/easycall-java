@@ -48,6 +48,9 @@ public class SpringDemoApplication {
         EasyService service = context.getBean(EasyService.class);
         service.create("profile", 8001,context.getBean(SpringDemoService.class));
         service.create("profile", 8002,context.getBean(SpringDemoService.class));
+        service.create("profile", 8003,context.getBean(SpringDemoService.class));
+        service.create("profile", 8004,context.getBean(SpringDemoService.class));
+
         service.startAndWait();
     }
 
