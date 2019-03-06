@@ -2,7 +2,9 @@ package com.github.easycall.core.client.lb;
 
 import com.github.easycall.core.client.Node;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ActiveLoadBalance  implements LoadBalance{
     private List<Node> list;
@@ -21,24 +23,42 @@ public class ActiveLoadBalance  implements LoadBalance{
             return null;
         }
 
-        int index = 0;
-        long min = list.get(0).active.get();
-        int equalsTotal = 1;
 
-        for(int i=1;i<list.size();i++){
-            long v = list.get(i).active.get();
-            if ( v < min){
-                min = v;
-                index = i;
-            }else if(v == min){
-                equalsTotal++;
+        long total = 0;
+
+        for(int i=0;i<list.size();i++)
+        {
+            Node node = list.get(i);
+            total+=node.active.get();
+        }
+
+        ArrayList<Long> activeList = new ArrayList<>(list.size());
+
+        long sum = 0;
+        for(int i=0;i<list.size();i++)
+        {
+            long weight = total-list.get(i).active.get();
+            sum+=weight;
+            activeList.set(i,weight);
+        }
+
+        if(sum == 0){
+
+            int index = (int)Math.floor(Math.random() * list.size());
+            return list.get(index);
+        }
+
+        long random = Math.round(Math.random() * sum);
+
+        for(int i=0;i<activeList.size();i++)
+        {
+            random-= activeList.get(i);
+            if(random <= 0)
+            {
+                return list.get(i);
             }
         }
 
-        if (equalsTotal == list.size()){
-            index = (int)Math.floor(Math.random() * list.size());
-        }
-
-        return list.get(index);
+        return list.get(0);
     }
 }

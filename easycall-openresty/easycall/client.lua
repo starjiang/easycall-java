@@ -26,10 +26,17 @@ end
 
 function _M.request(self,format,head,body_data)
   local lb_type = self.lb_type
-  if head['routeKey'] then
+  local route_key = head['routeKey'] or ""
+  if route_key ~= "" then
     lb_type = node_mgr.lb_type_hash
   end
-  local node,err = node_mgr.get_node(self.nm,head['service'],lb_type,head['routeKey'])
+
+  local name = head["service"] or ""
+  if name == "" then
+    return nil,nil,nil,"field service is empty"
+  end
+
+  local node,err = node_mgr.get_node(self.nm,name,lb_type,route_key)
   if not node then
     return nil,nil,nil,err
   end
@@ -39,6 +46,8 @@ function _M.request(self,format,head,body_data)
   if not ok then 
     return nil,nil,nil,err
   end
+
+  node_mgr:node_used_count(name,node,1)
 
   local prefetch = ''
   local head_data = ''
@@ -58,30 +67,35 @@ function _M.request(self,format,head,body_data)
   local n,err = sock:send(prefetch)
   if err then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,err
   end
 
   local n,err = sock:send(head_data)
   if err then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,err
   end
 
   local n,err = sock:send(body_data)
   if err then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,err
   end
 
   local n,err = sock:send(string.char(0x3))
   if err then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,err
   end
   
   local prefetch,err = sock:receive(10)
   if err then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,err
   end
   
@@ -89,32 +103,38 @@ function _M.request(self,format,head,body_data)
 
   if stx ~= 0x2 then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,"pkg:invalid stx"
   end
   if head_len > self.max_head_len or body_len > self.max_body_len then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,"pkg:invalid headlen or bodylen"
   end
 
   local head_data,err = sock:receive(head_len)
   if err then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,err
   end
   local body_data,err = sock:receive(body_len)
   if err then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,err
   end
   local etx,err = sock:receive(1)
 
   if string.byte(etx) ~= 0x3 then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,"pkg:invalid etx"
   end
 
   if err then
     sock:close()
+    node_mgr:node_used_count(name,node,-1)
     return nil,nil,nil,err
   end
 
@@ -124,6 +144,7 @@ function _M.request(self,format,head,body_data)
     head = cjson.decode(head_data)
   end
   sock:setkeepalive(self.max_idle_time,self.pool_size)
+  node_mgr:node_used_count(name,node,-1)
   return format,head,body_data,nil
 end
 

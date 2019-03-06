@@ -2,10 +2,7 @@ local easy_client = require ("easycall.client")
 local helpers = require("utils.helpers")
 local node_mgr = require("easycall.node_mgr")
 local cjson = require("cjson")
-
-local zkservers = {"127.0.0.1:2181","127.0.0.1:2181"}
-local pool_size = 200
-local timeout = 2000
+local config = require("config")
 
 local h, err = ngx.req.get_headers(0,true)
 local head = {}
@@ -33,7 +30,7 @@ if string.len(body_data) > easy_client.max_body_len  then
   return
 end
 
-local client = easy_client:new(zkservers,pool_size,timeout,node_mgr.lb_type_round_robin)
+local client = easy_client:new(config.zkservers,config.pool_size,config.pool_size,node_mgr.lb_type_active)
 local rformat,rhead,rbody_data,err = client:request(easy_client.format_json,head,body_data)
 if err then
   ngx.log(ngx.ERR,"request:",cjson.encode(head),",failed:",err)
